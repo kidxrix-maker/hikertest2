@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tiny Hiker</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#25382a;--ink:#f4f0dc;--gold:#ffcf3f;--red:#d9503f;--blue:#4aa8ff;--g:#4f9a5b;box-sizing:border-box}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:'DotGothic16','Malgun Gothic','Noto Sans CJK KR',sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
+canvas{image-rendering:pixelated;display:block}
+button,select,input,textarea{font-family:inherit}
+h1,h2,h3{font-family:'Press Start 2P',monospace;font-weight:normal;margin:0 0 10px;line-height:1.35}
+h1{font-size:clamp(16px,3.4vw,26px)}h2{font-size:13px;color:#c8621a}h3{font-size:11px;color:#c8621a}
+small{opacity:.85}
+/* grey Minecraft-style bevel skin */
+.btn{font-size:16px;background:#8b8b8b;color:#fff;border:4px solid;border-color:#e4e4e4 #3b3b3b #3b3b3b #e4e4e4;text-shadow:2px 2px #3f3f3f;padding:6px 14px;cursor:pointer}
+.btn:hover{background:#7d86c4}.btn:active{border-color:#3b3b3b #e4e4e4 #e4e4e4 #3b3b3b}
+.btn.go{background:#4f9a5b}.btn.go:hover{background:#5fae6b}
+.btn.alt{background:#7a7a7a}.btn.sm{font-size:14px;padding:2px 9px}.btn.wide{width:100%}
+.btn:disabled{background:#666;color:#bbb;cursor:not-allowed}
+.panel{background:#c6c6c6;color:#3b3b3b;border:4px solid;border-color:#fff #555 #555 #fff;box-shadow:0 0 0 4px #141f16;padding:10px 12px}
+.qb{background:#8b8b8b;color:#fff;border:3px solid;border-color:#e4e4e4 #3b3b3b #3b3b3b #e4e4e4;text-shadow:2px 2px #3f3f3f;padding:2px 8px;font-size:14px;cursor:pointer}.qb:hover{background:#7d86c4}
+/* header */
+#top{position:fixed;left:0;right:0;top:0;z-index:7;height:50px;display:flex;align-items:center;gap:12px;padding:0 12px;pointer-events:none}
+#top>*{pointer-events:auto}
+.logo{font:15px 'Press Start 2P',monospace;color:#f4f0dc;text-shadow:3px 3px #0d1a10;white-space:nowrap;cursor:default}
+#nav{display:flex;gap:6px;flex:1}
+#nav button{background:#8b8b8b;color:#fff;border:4px solid;border-color:#e4e4e4 #3b3b3b #3b3b3b #e4e4e4;text-shadow:2px 2px #3f3f3f;padding:3px 12px;font-size:15px;cursor:pointer}
+#nav button:hover{background:#7d86c4}
+#nav button.on{background:#4f9a5b;border-color:#3b3b3b #e4e4e4 #e4e4e4 #3b3b3b}
+#mute{width:44px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;margin-left:auto}
+body[data-page=hike] #nav,body[data-page=hike] .logo{display:none}
+body[data-page=mymap] #top{background:#25382a;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+/* canvases per page */
+#tcv,#map,#hike{position:fixed;left:0;top:0;width:100vw;height:100vh;display:none}
+body[data-page=home] #tcv,body[data-page=explore] #map,body[data-page=hike] #hike{display:block}
+#map{cursor:grab}#map.drag{cursor:grabbing}
+section.pg{position:fixed;inset:0;display:none;z-index:3}
+body[data-page=home] #home,body[data-page=explore] #explore,body[data-page=mymap] #mymap{display:block}
+/* home */
+#home{pointer-events:none}
+#hero{position:absolute;left:50%;top:50%;transform:translate(-50%,-4%);width:min(640px,92vw);text-align:center;pointer-events:auto}
+#hero .panel{padding:14px 18px}
+#hero .eye{font-size:12px;letter-spacing:2px;color:#6a6a6a}
+#hero p{margin:6px 0 12px;font-size:16px;line-height:1.55}
+#three{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px;width:min(760px,94vw);pointer-events:auto}
+#three .panel{flex:1;text-align:center;padding:6px 8px;font-size:13px;line-height:1.4}
+#three b{display:block;font:11px 'Press Start 2P',monospace;color:#c8621a;margin:2px 0 4px}
+/* explore */
+#explore{pointer-events:none}
+#explore>*{pointer-events:auto}
+#filters{position:fixed;left:12px;top:56px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:calc(100vw - 420px)}
+#filters .note{width:100%;font-size:12px;color:#fff;text-shadow:1px 1px #0d1a10;opacity:.95}
+.chip{background:#8b8b8b;color:#fff;border:3px solid;border-color:#e4e4e4 #3b3b3b #3b3b3b #e4e4e4;text-shadow:2px 2px #3f3f3f;padding:2px 10px;font-size:14px;cursor:pointer}
+.chip.on{background:#4f9a5b;border-color:#3b3b3b #e4e4e4 #e4e4e4 #3b3b3b}
+.chip.e.on{background:#4fa05b}.chip.m.on{background:#c98a1c}.chip.c.on{background:#c8432f}
+#zoom{position:fixed;left:12px;bottom:12px;display:flex;flex-direction:column;gap:6px}
+#cards{position:fixed;right:0;top:50px;bottom:0;width:390px;overflow-y:auto;padding:6px 14px 14px 6px;display:flex;flex-direction:column;gap:12px;touch-action:pan-y}
+.card{background:#d6d6d6;color:#3b3b3b;border:4px solid;border-color:#fff #555 #555 #fff;box-shadow:0 0 0 3px #141f16;padding:8px;font-size:14px;line-height:1.45;flex:none}
+.card.sel{box-shadow:0 0 0 3px #ffcf3f,0 0 0 6px #141f16;background:#e6e6e6}
+.card .th{width:100%;height:auto;aspect-ratio:240/150;border:3px solid #555;background:#8fd0ff;margin-bottom:6px}
+.card .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card .hd b{font-size:19px}.card .hd i{font-style:normal;font-size:12px;color:#666;margin-left:4px}
+.card .hd em{font-style:normal;font-size:22px}
+.card p{margin:4px 0}
+.card .meta{font-size:13px;line-height:1.7}
+.pill{display:inline-block;padding:0 7px;border:2px solid #222;font-size:12px;color:#fff}
+.pill.e{background:#4fa05b}.pill.m{background:#c98a1c}.pill.c{background:#c8432f}
+.stars{color:#c8621a;letter-spacing:1px}
+.card details{margin:6px 0}.card summary{cursor:pointer;font-size:13px;color:#555}
+.card details li{margin:3px 0;font-size:13px}
+.lmk.ok{color:#2f7a3a}
+.card .btn{margin-top:6px}
+#tip{position:fixed;display:none;pointer-events:none;background:#2a1b0e;color:#fff;border:3px solid #7b5634;padding:3px 10px;font-size:15px;z-index:8;white-space:nowrap}
+/* my map */
+#mymap{overflow-y:auto;padding:58px 12px 40px;touch-action:pan-y;-webkit-user-select:text;user-select:text}
+#mymap .wrap{max-width:1020px;margin:0 auto}
+#mymap .head{margin-bottom:10px}
+#mymap .head p{margin:4px 0;font-size:15px;color:#e8e4cc}
+.two{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-bottom:16px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font:20px 'Press Start 2P',monospace;color:#c8621a}.stats span{font-size:12px}
+#jmap{width:100%;height:520px;cursor:grab;border:3px solid #555;background:#efe3bd;touch-action:none}
+.legend{font-size:13px;line-height:1.6;margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:2px solid #222}
+#prev{width:144px;height:192px;box-shadow:0 0 0 3px #555;background:#bfe6ff;margin:0 auto 8px}
+#opts{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:14px}
+#opts .sw{display:flex;align-items:center;gap:6px}#opts .sw span{display:inline-block;min-width:64px;text-align:center}
+#opts button{background:#8b8b8b;border:2px solid;border-color:#e4e4e4 #3b3b3b #3b3b3b #e4e4e4;color:#fff;padding:0 7px;cursor:pointer}
+input[type=color]{width:42px;height:24px;padding:0;border:3px solid #555;background:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.cc{background:#d6d6d6;border:3px solid #8b8b8b;padding:8px;font-size:13px;line-height:1.5;display:flex;gap:8px}
+.cc.real{border-color:#4fbf5a}.cc canvas{width:72px;height:72px;flex:none}
+.cc.off canvas{opacity:.9}
+.cc b{font-size:15px}
+form.f{display:grid;gap:8px;max-width:520px}
+form.f label{font-size:13px}
+form.f select,form.f input,form.f textarea{width:100%;padding:6px;border:3px solid #555;background:#f1f1f1;color:#222;font-size:15px;-webkit-user-select:text;user-select:text}
+form.f textarea{min-height:64px}
+.mem{padding:8px 0;border-bottom:2px dashed #aaa;font-size:14px}.mem p{margin:3px 0}
+.panel+.panel{margin-top:16px}.two .panel+.panel,.stack .panel+.panel{margin-top:0}
+.foot{text-align:center;color:#e8e4cc;font-size:13px;padding:18px 6px;line-height:1.8}
+/* hike */
+#hbar{position:fixed;left:8px;right:62px;top:8px;z-index:4;display:none;align-items:center;gap:10px;text-shadow:2px 2px #0d1a10;background:rgba(30,20,10,.55);padding:5px 8px;font-size:15px}
+#hTitle{display:flex;flex-direction:column;line-height:1.2;min-width:0}#hTitle b{font-size:17px;white-space:nowrap}#hTitle small{font-size:12px}
+#prof{flex:1;max-width:260px;height:44px;min-width:90px;border:3px solid #2a1b0e;background:rgba(30,20,10,.5)}
+#hLm{text-align:center;line-height:1.1}#hLm b{font-size:18px;display:block}#hLm small{font-size:11px}
+#obj{position:fixed;left:50%;top:66px;transform:translateX(-50%);z-index:4;display:none;background:rgba(30,20,10,.65);padding:4px 12px;font-size:15px;white-space:nowrap;max-width:96vw;overflow:hidden;text-overflow:ellipsis;text-shadow:2px 2px #0d1a10}
+#obj small{opacity:.8;font-size:12px}#obj .arr{color:#ffd23f}
+#hud{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;display:none;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;max-width:98vw;font-size:14px;text-shadow:2px 2px #0d1a10;background:rgba(30,20,10,.6);padding:6px 12px}
+.bar{display:inline-flex;align-items:center;gap:6px}
+.bar u{display:inline-block;width:96px;height:12px;background:#1d140a;border:2px solid #1d140a;outline:1px solid #8c7a5a;text-decoration:none}
+.bar u i{display:block;height:100%;background:#6ed05a}.bar.w u i{background:var(--blue)}.bar.low u i{background:var(--red)}
+body[data-page=hike] #hbar,body[data-page=hike] #obj{display:flex}body[data-page=hike] #hud{display:flex}
+#prompt{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);z-index:4;display:none;background:#c6c6c6;color:#3b3b3b;border:3px solid;border-color:#fff #555 #555 #fff;padding:4px 12px;font-size:16px;white-space:nowrap}
+#bubble{position:fixed;z-index:4;display:none;transform:translate(-50%,-100%);background:#fff;color:#222;border:3px solid #222;padding:2px 9px;font-size:15px;white-space:nowrap;pointer-events:none}
+#toast{position:fixed;z-index:12;left:50%;top:112px;transform:translateX(-50%);display:none;max-width:min(560px,90vw);text-align:center;font-size:16px;pointer-events:none}
+#toast .sg{background:#ffcf3f;border:2px solid #333;padding:0 4px;font-size:11px;margin-right:4px}
+#touch{position:fixed;left:0;right:0;bottom:64px;z-index:5;display:none;justify-content:space-between;padding:0 12px;pointer-events:none}
+#touch>div{display:flex;gap:10px;pointer-events:auto}
+#touch button{width:62px;height:62px;font-size:24px;background:rgba(198,198,198,.88);color:#3b3b3b;border:3px solid;border-color:#fff #555 #555 #fff;touch-action:none}
+#touch button:active,#touch button.dn{background:var(--gold)}
+@media (pointer:coarse),(max-width:760px){body[data-page=hike] #touch{display:flex}}
+/* overlays */
+#ov{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:rgba(15,10,4,.6);padding:60px 10px 10px}
+#ov.show{display:flex}
+#ovBox{max-height:calc(100vh - 80px);overflow:auto;min-width:min(340px,94vw);max-width:min(560px,96vw);font-size:16px;line-height:1.55;text-align:center}
+#ovBox .big{font:15px 'Press Start 2P',monospace;color:#c8621a;margin:2px 0 8px}
+#ovBox canvas{margin:6px auto;width:96px;height:96px}
+.opt2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.opt2 .btn{text-align:left;font-size:15px;padding:8px 10px}.opt2 small{display:block;font-size:12px;opacity:.9;margin-top:3px}
+.row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed #999;padding:2px 0;font-size:15px}
+#err{white-space:pre-wrap}
+@media (max-width:760px){
+ .logo{display:none}#nav button{padding:3px 9px;font-size:14px}
+ #cards{top:auto;left:0;right:0;bottom:0;width:100%;height:232px;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:8px 10px 12px;scroll-snap-type:x mandatory;touch-action:pan-x;background:linear-gradient(transparent,rgba(10,20,12,.55))}
+ .card{width:min(300px,82vw);scroll-snap-align:center;overflow-y:auto}
+ .card .th{aspect-ratio:240/110}
+ #filters{max-width:calc(100vw - 24px);top:54px}#filters .note{display:none}
+ #zoom{bottom:244px}
+ .two{grid-template-columns:1fr}#jmap{height:380px}#prev{width:96px;height:128px}
+ #three{display:none}#hero{transform:translate(-50%,-30%)}
+ #hStats,#hTitle small{display:none}.bar u{width:56px}#hud{gap:6px;font-size:12px;padding:4px 8px;bottom:auto;top:98px;left:8px;transform:none;justify-content:flex-start}#toast{top:150px}#touch{bottom:20px}#prompt{bottom:96px}
+ .opt2{grid-template-columns:1fr}
+}
+@media (max-height:520px){#hero p{display:none}}
+</style>
+</head>
+<body data-page="home">
+<header id="top"><span class="logo">TINY HIKER</span><nav id="nav"></nav><button id="mute" class="qb" aria-label="Sound"></button></header>
+<canvas id="tcv"></canvas>
+<canvas id="map"></canvas>
+<canvas id="hike"></canvas>
+<section id="home" class="pg">
+  <div id="hero"><div class="panel">
+    <div class="eye">LEVEL UP YOUR OUTDOOR LIFE</div>
+    <h1>Your next adventure starts here.</h1>
+    <p>Explore Korea's mountains, walk pixel trails, unlock summit badges, and build a map of the places you've really hiked.</p>
+    <button class="btn go" id="startBtn">Explore Mountains &#9656;</button>
+  </div></div>
+  <div id="three"><div class="panel"><b>PLAY</b>Walk trails and reach pixel summits.</div><div class="panel"><b>DISCOVER</b>Find a mountain for your next hike.</div><div class="panel"><b>COLLECT</b>Pin the mountains you've really visited.</div></div>
+</section>
+<section id="explore" class="pg">
+  <div id="filters"></div>
+  <div id="zoom"><button class="btn sm" id="zin">+</button><button class="btn sm" id="zout">&minus;</button><button class="btn sm alt" id="zrst">&#8962;</button></div>
+  <div id="cards"></div>
+</section>
+<section id="mymap" class="pg"><div class="wrap">
+  <div class="head"><h1>My Hiking Map</h1><p>Keep your game badges separate from your real-life hiking memories.</p></div>
+  <div class="two">
+    <div class="panel" id="hikerCard"><h3>MY HIKER</h3><canvas id="prev" width="48" height="64"></canvas><div id="rank" style="text-align:center;margin-bottom:8px"></div><div id="opts"></div><button class="btn sm wide" id="rand" style="margin-top:8px">Surprise me</button></div>
+    <div class="stack">
+      <div class="panel"><div class="stats" id="stats"></div></div>
+      <div class="panel"><h3>YOUR KOREA</h3><canvas id="jmap"></canvas>
+        <div class="legend"><i style="background:#ffcf3f"></i>Pinned from the game &nbsp; <i style="background:#4fbf5a"></i>Hiked in real life (you tell us)</div></div>
+    </div>
+  </div>
+  <div class="panel"><h2>Collection</h2><div class="grid" id="coll"></div></div>
+  <div class="panel"><h2>Pin a real hike</h2>
+    <p style="margin:0 0 8px;font-size:14px">Been on a mountain for real? Add it yourself. This is a personal memory, <b>not GPS-verified</b>, and the game never adds one for you.</p>
+    <form class="f" id="rform"><label>Mountain<select id="rm"></select></label><label>Date of hike (optional)<input type="date" id="rd"></label><label>Memory or note (optional)<textarea id="rn" placeholder="Who did you go with? What was your favorite view?"></textarea></label><button type="submit" class="btn go">Pin my real hike</button></form>
+  </div>
+  <div class="panel" id="mem"></div>
+  <div class="foot">Check official trail conditions and closures before a real hike.<br>Game trails, trail names and difficulty ratings are illustrations, not real navigation.<br><button class="btn sm alt" id="reset" style="margin-top:8px">Reset my progress</button></div>
+</div></section>
+<div id="hbar"><button class="qb" id="pauseBtn">&#10074;&#10074; Menu</button><div id="hTitle"><b id="hName"></b><small id="hKo"></small></div><canvas id="prof" width="220" height="44"></canvas><div id="hLm"></div></div>
+<div id="obj"></div>
+<div id="hud">
+  <span class="bar" id="bSt">STAMINA<u><i></i></u></span><span class="bar w" id="bHy">WATER<u><i></i></u></span>
+  <button class="qb" id="qWater">[Q] Water <span id="nW">0</span></button><button class="qb" id="qSnack">[F] Snack <span id="nS">0</span></button><button class="qb" id="spdBtn">1x speed</button>
+</div>
+<div id="prompt"></div><div id="bubble"></div><div id="toast" class="panel"></div>
+<div id="touch"><div><button id="tL">&#9664;</button><button id="tR">&#9654;</button></div><div><button id="tE">E</button><button id="tJ">&#10514;</button></div></div>
+<div id="ov"><div id="ovBox" class="panel"></div></div>
+<div id="tip"></div>
+<script>
+/* ==== core.js ==== */
+
+// ---------- core: errors, helpers, save, sound ----------
+function showErr(msg){
+  var d = document.getElementById("err");
+  if(!d){ d = document.createElement("div"); d.id = "err"; d.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b3261e;color:#fff;padding:8px 12px;font:14px monospace;white-space:pre-wrap;cursor:pointer"; d.onclick = function(){ d.remove(); }; document.body.appendChild(d); }
+  d.textContent = "Error: " + msg + "  (tap to close)";
+}
+window.addEventListener("error", function(e){ showErr(e.message + " (line " + e.lineno + ")"); });
+window.addEventListener("unhandledrejection", function(e){ showErr(String(e.reason)); });
+var $ = function(id){ return document.getElementById(id); };
+var mc = $("map").getContext("2d"), hc = $("hike").getContext("2d"), tcx = $("tcv").getContext("2d");
+
+// ----- save (localStorage; every access is guarded) -----
+var SKEY = "tinyhiker4";
+function today(){ var d = new Date(); return d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2); }
+function freshSave(){ return {v:4, done:{}, pins:{}, logs:[], lm:{}, stamps:{}, h:{}, set:{sound:true, spd:1}, seen:{}}; }
+var save = freshSave();
+(function(){
+  var s = null, old = null;
+  try{ s = JSON.parse(localStorage.getItem(SKEY)); }catch(e){}
+  if(s && typeof s === "object") save = s;
+  else { try{ old = JSON.parse(localStorage.getItem("tinyhiker")); }catch(e){}
+    if(old && typeof old === "object"){ if(old.h) save.h = old.h; if(old.stamps) save.stamps = old.stamps; if(old.done) Object.keys(old.done).forEach(function(k){ save.done[k] = {d:(old.done[k] && old.done[k].d) || "", n:1, r:"easy", t:0}; }); }
+  }
+  var d = freshSave(); Object.keys(d).forEach(function(k){ if(save[k] === undefined || save[k] === null) save[k] = d[k]; });
+  Object.keys(d.set).forEach(function(k){ if(save.set[k] === undefined) save.set[k] = d.set[k]; });
+})();
+function store(){ try{ localStorage.setItem(SKEY, JSON.stringify(save)); }catch(e){} }
+function cnt(o){ return Object.keys(o || {}).length; }
+function rng(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a>>>15, 1|a); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14)>>>0)/4294967296; }; }
+function shade(hx, a){ var n = parseInt(hx.slice(1), 16), f = function(v){ return Math.max(0, Math.min(255, v+a)); }; return "rgb(" + f(n>>16) + "," + f((n>>8)&255) + "," + f(n&255) + ")"; }
+function R(c, x, y, w, h, col){ c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]; }); }
+
+// ----- soft sounds (one mute switch controls everything) -----
+var AC = null, soundOn = !!save.set.sound, NB = null;
+function ac(){ if(!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if(AC.state === "suspended") AC.resume(); return AC; }
+function tone(f, d, v, to, delay){
+  if(!soundOn) return;
+  try{
+    var a = ac(), t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(f, t); if(to) o.frequency.exponentialRampToValueAtTime(to, t+d);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v || .06, t+.02); g.gain.exponentialRampToValueAtTime(.0001, t+d);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+d+.05);
+  }catch(e){}
+}
+function puff(d, v, freq, type){
+  if(!soundOn) return;
+  try{
+    var a = ac();
+    if(!NB){ NB = a.createBuffer(1, a.sampleRate, a.sampleRate); var ch = NB.getChannelData(0); for(var i = 0; i < ch.length; i++) ch[i] = Math.random()*2-1; }
+    var s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime;
+    s.buffer = NB; f.type = type || "lowpass"; f.frequency.value = freq;
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t+d);
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start(t); s.stop(t+d);
+  }catch(e){}
+}
+var toastT = null;
+function showToast(txt, ms){ var t = $("toast"); t.innerHTML = txt; t.style.display = "block"; clearTimeout(toastT); toastT = setTimeout(function(){ t.style.display = "none"; }, ms || 3200); }
+
+// ----- tiny bitmap font (5x7) so map labels and the title stay crisp without web fonts -----
+var F57 = {
+ A:"01110 10001 10001 11111 10001 10001 10001", B:"11110 10001 10001 11110 10001 10001 11110", C:"01111 10000 10000 10000 10000 10000 01111",
+ D:"11110 10001 10001 10001 10001 10001 11110", E:"11111 10000 10000 11110 10000 10000 11111", F:"11111 10000 10000 11110 10000 10000 10000",
+ G:"01111 10000 10000 10011 10001 10001 01111", H:"10001 10001 10001 11111 10001 10001 10001", I:"11111 00100 00100 00100 00100 00100 11111",
+ J:"00111 00010 00010 00010 00010 10010 01100", K:"10001 10010 10100 11000 10100 10010 10001", L:"10000 10000 10000 10000 10000 10000 11111",
+ M:"10001 11011 10101 10101 10001 10001 10001", N:"10001 11001 10101 10011 10001 10001 10001", O:"01110 10001 10001 10001 10001 10001 01110",
+ P:"11110 10001 10001 11110 10000 10000 10000", Q:"01110 10001 10001 10001 10101 10010 01101", R:"11110 10001 10001 11110 10100 10010 10001",
+ S:"01111 10000 10000 01110 00001 00001 11110", T:"11111 00100 00100 00100 00100 00100 00100", U:"10001 10001 10001 10001 10001 10001 01110",
+ V:"10001 10001 10001 10001 10001 01010 00100", W:"10001 10001 10001 10101 10101 11011 10001", X:"10001 10001 01010 00100 01010 10001 10001",
+ Y:"10001 10001 01010 00100 00100 00100 00100", Z:"11111 00001 00010 00100 01000 10000 11111",
+ "0":"01110 10011 10101 10101 11001 10001 01110", "1":"00100 01100 00100 00100 00100 00100 01110", "2":"01110 10001 00001 00110 01000 10000 11111",
+ "3":"11110 00001 00001 01110 00001 00001 11110", "4":"00010 00110 01010 10010 11111 00010 00010", "5":"11111 10000 11110 00001 00001 10001 01110",
+ "6":"00110 01000 10000 11110 10001 10001 01110", "7":"11111 00001 00010 00100 01000 01000 01000", "8":"01110 10001 10001 01110 10001 10001 01110",
+ "9":"01110 10001 10001 01111 00001 00010 01100", " ":"00000 00000 00000 00000 00000 00000 00000", ".":"00000 00000 00000 00000 00000 01100 01100",
+ "-":"00000 00000 00000 11111 00000 00000 00000", "!":"00100 00100 00100 00100 00100 00000 00100", "'":"00100 00100 00000 00000 00000 00000 00000"
+};
+var F57c = {};
+function glyph(ch){ var g = F57c[ch]; if(g) return g; var s = F57[ch] || F57[" "]; g = F57c[ch] = s.split(" "); return g; }
+function txtW(s, k){ return s.length*6*k-k; }
+// draw text with pixel size k; mode: plain colour or function(rowIndex) -> colour
+function txt(c, s, x, y, k, col, sh){
+  s = s.toUpperCase(); var i, r, q;
+  for(i = 0; i < s.length; i++){
+    var g = glyph(s[i]);
+    for(r = 0; r < 7; r++) for(q = 0; q < 5; q++) if(g[r][q] === "1"){
+      if(sh) { c.fillStyle = sh; c.fillRect(x+i*6*k+q*k+k, y+r*k+k, k, k); }
+    }
+  }
+  for(i = 0; i < s.length; i++){
+    g = glyph(s[i]);
+    for(r = 0; r < 7; r++) for(q = 0; q < 5; q++) if(g[r][q] === "1"){ c.fillStyle = typeof col === "function" ? col(r) : col; c.fillRect(x+i*6*k+q*k, y+r*k, k, k); }
+  }
+}
+
+/* ==== data.js ==== */
+
+// ---------- mountain data ----------
+// Real-world facts (heights, places, dates, hiking times) come from Wikipedia pages checked while building this game
+// (plus Seoul City Wall's official page for Namsan). Anything not confirmed there is left out or marked as game-only.
+// "look" fields (colours, shapes, trail names) are the game's illustration and are NOT real trail information.
+var PAL = {
+ day:["#6ec0f5","#86cbf7","#a0d6f9","#bce2fb","#d6eefd"], haze:["#9ec0e6","#b2cdec","#c4d9f0","#d6e5f4","#e8f0f8"],
+ mist:["#bfe6cf","#cdecd8","#dbf2e1","#e8f7ea","#f4fbef"], warm:["#ffc98a","#ffd49d","#ffdfb2","#ffead0","#fff4e4"],
+ cold:["#a8c4e0","#b9d0e6","#cadcec","#dbe7f2","#ecf3f9"], dawn:["#6a86d0","#98a0d8","#e4a8b4","#ffc690","#ffe6b4"],
+ eve:["#7a6fb0","#b07fa8","#e89a8c","#ffb878","#ffd9a0"], teal:["#4fb4e8","#6cc4ee","#8cd2f2","#acdff6","#cdecf9"],
+ violet:["#a99ae0","#bcaee6","#cfc4ec","#e2dbf2","#f2eef8"], gold:["#ffd98a","#ffe2a0","#ffeab8","#fff1cf","#fff8e6"],
+ steel:["#8fb4d8","#a4c2e0","#b8d0e8","#cddff0","#e2edf8"], snowy:["#8aa8e0","#a8bce6","#c8d0ee","#e4e4f4","#f4f0f8"]
+};
+var LVL = ["Easy","Moderate","Challenging"], LVC = ["e","m","c"];
+// each mountain: id, korean, english, height (m), height text, region, [lng,lat], map nudge, seed, blurb, tags, facts, real-life time, game trail names, landmarks, look
+var MS = [
+ {id:"namsan", em:"🗼", n:"남산", en:"Namsan", h:270, hs:"270 m", r:"Seoul (Jung District)", ll:[126.988,37.551], d:[4,1], seed:21,
+  blurb:"A small city-park mountain in the middle of Seoul, topped by N Seoul Tower.", tags:["City park","N Seoul Tower","Skyline views"],
+  facts:["Namsan Park offers views of the downtown Seoul skyline."],
+  real:{t:"Seoul City Wall's official Namsan trail: 6.7 km, about 3 hours (Jangchung Gymnasium to Baekbeom Square)", s:"Seoul City Wall (seoulcitywall.seoul.go.kr)"},
+  trail:{e:"Park Promenade", s:"Tower Stairs", seg:["Park Gate","Promenade","Stone Steps","Tower Plaza"]},
+  lm:[["Namsan Park","Namsan and the area around it form Namsan Park, a public park run by the city government.","a","gate"],
+      ["Mongmyeoksan Beacon Tower","A smoke-signal station that was part of an emergency communication system until 1985.","e","beacon"],
+      ["Korea's first cable car","Opened on 12 May 1962, it was the first cable car facility in Korea.","s","cable"],
+      ["N Seoul Tower","The tower on the summit reaches 480 m above sea level.","top","tower"]],
+  L:{sky:PAL.day, top:"#6fbf5f", dirt:"#9a8a6a", stone:"#8d9199", far:"#a3b3c8", far2:"#b9c7d8", lay:["city","hills"], trees:["#3f8d4a","#4fa05b"], tt:"pine",
+     path:[[0,"brick"],[.62,"stone"]], rail:"steel", prof:{up:.5,dn:.05,ledge:0,flat:.03,stairs:1,hs:.5,end:"tower"}, obs:["roots","rock"], amb:"birds", fx:"lights",
+     flo:["#ff9ab8","#ffffff","#ffd23f"], ex:["cablecar"], emb:"tower"}},
+ {id:"suraksan", em:"💧", n:"수락산", en:"Suraksan", h:638, hs:"637.7 m", r:"Seoul (Nowon) · Namyangju · Uijeongbu", ll:[127.09,37.68], d:[12,3], seed:19,
+  blurb:"A friendly hiking mountain on the north-east edge of Seoul, with waterfalls and old temples.", tags:["Waterfalls","Old temples","Easy city hike"],
+  facts:["Wikipedia lists the easiest route as starting from Jangam Station."], real:null,
+  trail:{e:"Creek Walk", s:"Waterfall Climb", seg:["Valley Entrance","Creek Path","Temple Stairs","Rock Top"]},
+  lm:[["Heungguksa","A temple dating from the Silla period.","a","temple"],
+      ["Geunnyu, Eunnyu & Ongnyu Falls","Three waterfalls on Suraksan.","e","falls"],
+      ["Gwesanjeong Pavilion","A pavilion on Suraksan.","s","pav"],
+      ["Seongnimsa","A temple from the Joseon period.","b","temple"],
+      ["Suraksan summit","At 637.7 m, this is the mountain's highest point.","top","peak"]],
+  L:{sky:PAL.day, top:"#5fb04f", dirt:"#7d6a50", stone:"#8d8d8a", far:"#8fb09a", far2:"#aac4b1", lay:["hills","dome"], trees:["#3a8f4a","#52a85f"], tt:"oak",
+     path:[[0,"dirt"],[.45,"stone"],[.75,"plank"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.05,flat:.05,hs:.55,end:"plain"}, bridge:1, obs:["mud","rock"], amb:"birds", fx:"rainbow",
+     flo:["#ffd23f","#ffffff","#ff7aa8"], ex:["farfalls"], emb:"falls"}},
+ {id:"gwanaksan", em:"🎓", n:"관악산", en:"Gwanaksan", h:632, hs:"632 m", r:"Seoul (borders Gwacheon & Anyang)", ll:[126.964,37.444], d:[0,6], seed:9,
+  blurb:"A ridge on Seoul's southern edge, right beside Seoul National University.", tags:["Ridge walk","City views","Very popular"],
+  facts:["Close to 5 million hikers use the mountain each year, says Wikipedia."],
+  real:{t:"Trail from the Seoul National University entrance: 11.3 km, about 4 hours", s:"Wikipedia: Gwanaksan"},
+  trail:{e:"Campus Trail", s:"Rocky Ridge", seg:["Campus Gate","Forest Trail","Stone Ridge","Summit Rocks"]},
+  lm:[["Seoul National University","The university's main campus sits just north-west of the mountain.","a","campus"],
+      ["Wongaksa","One of the many Buddhist temples on Gwanaksan.","e","temple"],
+      ["City park since 1968","The Seoul side of the mountain was designated a city park in 1968.","s","gate"],
+      ["Gwacheon government complex","The national government complex lies to the east of the mountain.","b","govt"],
+      ["Gwanaksan summit","At 632 m, this is the mountain's highest point.","top","peak"]],
+  L:{sky:PAL.eve, top:"#7fa34e", dirt:"#8a6a4a", stone:"#7a7a80", far:"#8a7aa0", far2:"#b08aa8", lay:["city","jag"], trees:["#4a7f45","#5a9a50"], tt:"pine",
+     path:[[0,"dirt"],[.4,"slab"]], rail:"steel", prof:{up:.5,dn:.14,ledge:.12,flat:.04,hs:.55,end:"plain"}, obs:["boulder","rock"], amb:"birds", fx:"sunset",
+     flo:["#ffb84a","#ffffff"], ex:[], emb:"campus"}},
+ {id:"dobongsan", em:"🪨", n:"도봉산", en:"Dobongsan", h:740, hs:"739.5 m", r:"Seoul · Yangju · Uijeongbu", ll:[127.016,37.699], d:[6,-5], seed:8,
+  blurb:"Rocky peaks in Bukhansan National Park, on the northern edge of Seoul.", tags:["Rock peaks","Temples","Many trails"],
+  facts:["Part of Bukhansan National Park.","Wikipedia lists the easiest route as starting at Dobongsan Station."], real:null,
+  trail:{e:"Valley Path", s:"Needle Ridge", seg:["Station Gate","Valley","Rock Stairs","Needle Peaks"]},
+  lm:[["Cheonchuksa","A Buddhist temple on Dobongsan.","a","temple"],
+      ["Songchu Valley","One of Dobongsan's valleys, with Donong, Obong and Yeongeocheon.","e","creek"],
+      ["Seoninbong","Wikipedia says 37 hiking courses connect to the Seoninbong summit.","s","needle"],
+      ["Manjangbong","One of Dobongsan's rock peaks, alongside Seoninbong and Jubong.","b","needle"],
+      ["Jaunbong","A rock peak of about 740 m, close to the mountain's listed height of 739.5 m.","top","needle"]],
+  L:{sky:PAL.haze, top:"#6aa65a", dirt:"#8b7b68", stone:"#a3a3a0", far:"#b3bccb", far2:"#c8d0dc", lay:["jag","needle"], trees:["#2f7d45","#3e9455"], tt:"pine",
+     path:[[0,"dirt"],[.35,"slab"]], rail:"steel", prof:{up:.5,dn:.12,ledge:.2,flat:.03,hs:.6,end:"cliff"}, obs:["boulder","rock"], amb:"wind", fx:"rays",
+     flo:["#ffffff","#ffd23f"], ex:[], emb:"needle"}},
+ {id:"naejangsan", em:"🍁", n:"내장산", en:"Naejangsan", h:763, hs:"763 m", r:"North Jeolla (near Jeongeup)", ll:[126.889,35.484], d:[0,0], seed:10,
+  blurb:"A mountain known for fall foliage for more than 500 years.", tags:["Autumn maples","Pavilion by a pond","Nine summits"],
+  facts:["Became a national park on 17 November 1971.","About a million visitors a year, up to ~100,000 a day in peak season."],
+  real:{t:"The circuit over its 9 summits (622 to 763 m) takes about 4 to 7 hours", s:"Wikipedia: Naejangsan"},
+  trail:{e:"Maple Lane", s:"Ridge Loop", seg:["Maple Gate","Pond Path","Leaf Slope","Sinseon Ridge"]},
+  lm:[["Namchang Valley","A valley in Naejangsan National Park.","a","creek"],
+      ["Uhwajeong Pavilion","A pavilion beside the water in Naejangsan.","e","pav"],
+      ["Sinseonbong","A summit marked on the park's trail map.","s","peak"],
+      ["The nine-summit circuit","A circuit of 9 summits, from 622 m to 763 m, takes about 4 to 7 hours.","b","gate"],
+      ["Naejangsan summit","The mountain's highest point is 763 m.","top","peak"]],
+  L:{sky:PAL.warm, top:"#d9803a", dirt:"#8a5a30", stone:"#7a6a5a", far:"#e0a070", far2:"#ecc08e", lay:["hills","hills"], trees:["#d9381e","#f0742a","#f2b53a"], tt:"maple",
+     path:[[0,"leaf"],[.5,"plank"],[.7,"leaf"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.04,flat:.06,hs:.5,end:"plain"}, bridge:1, obs:["leaves","log"], amb:"leaves", fx:"maple",
+     flo:null, ex:[], emb:"maple"}},
+ {id:"geumjeongsan", em:"🌊", n:"금정산", en:"Geumjeongsan", h:802, hs:"801.5 m", r:"Busan", ll:[129.05,35.285], d:[0,0], seed:16,
+  blurb:"A fortress mountain in Busan with a big temple, a golden-water legend and sea views.", tags:["Fortress wall","Temple","Sea views"],
+  facts:["Some people hike up early on New Year's Day to see the first sunrise.","Wikipedia notes a cable car and a bus go part of the way up."],
+  real:{t:"Beomeosa temple to the peak via the north gate: about 1 hour 20 minutes", s:"Wikipedia: Geumjeongsan"},
+  trail:{e:"Temple Road", s:"Fortress Wall", seg:["Temple Gate","Wall Path","North Gate","Godang Peak"]},
+  lm:[["Beomeosa","A temple on the mountain's slopes; the route to the peak starts here.","a","temple"],
+      ["North Gate","The route from Beomeosa to the peak goes through a northern gate of the fortress.","e","fort"],
+      ["Geumsaem, the golden well","A natural hollow on top of a granite boulder. Legend says it never dries and its water is always gold.","s","well"],
+      ["Sanseongmaeul","A small village in the valley with restaurants and amenities.","b","village"],
+      ["Godangbong","The 801.5 m peak has a shrine (Gomodang). On clear days you can see Gimhae and Tsushima Island.","top","gomodang"]],
+  L:{sky:PAL.dawn, top:"#6e9a50", dirt:"#8a7a5a", stone:"#8a8a90", far:"#6a7aa8", far2:"#8f90bc", lay:["hills","hills"], trees:["#355f3f","#487a50"], tt:"pine",
+     path:[[0,"dirt"],[.3,"stone"],[.6,"slab"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.08,flat:.05,hs:.55,end:"plain"}, obs:["rock","log"], amb:"birds", fx:"sunrise",
+     flo:["#ffd2e0","#ffffff"], ex:["sea","wall"], wall:[.42,.78], emb:"wave", sun:{x:.8,y:.5}}},
+ {id:"bukhansan", em:"🏙️", n:"북한산", en:"Bukhansan", h:837, hs:"836.5 m", r:"Seoul · Gyeonggi", ll:[126.977,37.659], d:[-7,-1], seed:7,
+  blurb:"Seoul's tallest mountain: jagged granite peaks you can see from most of the city.", tags:["Granite domes","Rock climbing","Seoul views"],
+  facts:["Wikipedia lists an easy start at Bukhansan Ui Station: 2.29 km to the park visitor center."], real:null,
+  trail:{e:"Forest Stairs", s:"Granite Ridge", seg:["Park Entrance","Pine Forest","Granite Slabs","Baegundae"]},
+  lm:[["Bukhansan National Park","Formed in 1983. About 5 million hikers visit each year.","a","gate"],
+      ["Insubong","A granite dome of 810.5 m, popular with rock climbers.","e","dome"],
+      ["Mangyeongdae","A 787 m peak, one of Bukhansan's three main peaks.","s","peak"],
+      ["Granite country","The mountain is mostly Jurassic granite; erosion carved its jagged peaks.","b","gate"],
+      ["Baegundae","The highest peak, 836.5 m. With Insubong and Mangyeongdae it was once called Samgaksan.","top","peak3"]],
+  L:{sky:PAL.day, top:"#6ea65a", dirt:"#9a9690", stone:"#b0b0ac", far:"#aebbd0", far2:"#c3cfdf", lay:["city","dome"], trees:["#2f7d45","#3f9158"], tt:"pine",
+     path:[[0,"dirt"],[.3,"slab"]], rail:"steel", prof:{up:.5,dn:.12,ledge:.14,flat:.03,hs:.58,end:"dome"}, obs:["boulder","rock"], amb:"wind", fx:"dusk",
+     flo:["#ffffff","#ffd23f"], ex:[], emb:"peaks"}},
+ {id:"gyeryongsan", em:"🐉", n:"계룡산", en:"Gyeryongsan", h:845, hs:"845 m", r:"South Chungcheong · Daejeon", ll:[127.205,36.341], d:[0,0], seed:11,
+  blurb:"A mountain whose name means \"chicken dragon\", dotted with old temples.", tags:["Old temples","Sacred mountain","Chicken-dragon name"],
+  facts:["About 1.4 million people visit each year.","Part of the mountain is a military reserve; the park has a campground."], real:null,
+  trail:{e:"Temple Valley", s:"Dragon Spine", seg:["Temple Gate","Qi Valley","Stone Stairs","Heaven Peak"]},
+  lm:[["Donghaksa","One of the mountain's famous Buddhist temples.","a","temple"],
+      ["Gapsa","A temple over a thousand years old.","e","temple"],
+      ["Sinwonsa","Also a temple over a thousand years old.","s","temple"],
+      ["Chicken Dragon Mountain","Gyeryongsan means \"chicken dragon mountain\". Tradition says it has the most qi of any mountain in South Korea.","b","gate"],
+      ["Cheonhwangbong","The highest peak, 845 m.","top","peak"]],
+  L:{sky:PAL.violet, top:"#5a9a6a", dirt:"#7a6a58", stone:"#7e7a8c", far:"#8a84b8", far2:"#a8a2cc", lay:["jag","hills"], trees:["#2f6f4f","#3f8a62"], tt:"pine",
+     path:[[0,"dirt"],[.4,"stone"]], rail:null, prof:{up:.5,dn:.1,ledge:.06,flat:.05,hs:.55,end:"plain"}, obs:["roots","rock"], amb:"mist", fx:"aura",
+     flo:["#c9a8ff","#ffffff"], ex:[], emb:"dragon"}},
+ {id:"songnisan", em:"🐢", n:"속리산", en:"Songnisan", h:1058, hs:"1,058.4 m", r:"North Chungcheong · North Gyeongsang", ll:[127.877,36.541], d:[0,0], seed:12,
+  blurb:"\"Mountain removed from worldliness\": nine peaks, seventeen temples and a very big bronze Buddha.", tags:["Temples","Nine peaks","Turtle rocks"],
+  facts:["The park has 9 peaks and 17 known temples, and covers 234.5 km²."], real:null,
+  trail:{e:"Temple Road", s:"Turtle Ridge", seg:["Temple Gate","Forest Road","Rocky Climb","Summit Ridge"]},
+  lm:[["Turtle sculptures","Turtle sculptures stand near the entrance and above Beopjusa. One in the river is made from three boulders.","a","turtle"],
+      ["Beopjusa","A 7th-century temple, described as the largest in central Korea, with a huge bronze Buddha.","e","buddha"],
+      ["Munjangdae","A peak once called Unjangdae. King Sejo reportedly found a book of moral teachings there.","s","peak"],
+      ["Songnisan summit","The park's highest point is 1,058.4 m.","top","peak"]],
+  L:{sky:PAL.mist, top:"#5fb04f", dirt:"#7a5a3a", stone:"#7a7a78", far:"#9fc4a2", far2:"#b9d8bb", lay:["hills","peaks"], trees:["#3a8f4a","#52a85f","#79b85a"], tt:"oak",
+     path:[[0,"dirt"],[.4,"stone"]], rail:"wood", prof:{up:.5,dn:.12,ledge:.06,flat:.05,hs:.55,end:"plain"}, obs:["roots","rock"], amb:"birds", fx:"lanterns",
+     flo:["#ffb3c7","#ffffff"], ex:[], emb:"turtle"}},
+ {id:"woraksan", em:"🏞️", n:"월악산", en:"Woraksan", h:1094, hs:"1,094 m", r:"North Chungcheong · North Gyeongsang", ll:[128.105,36.885], d:[0,0], seed:15,
+  blurb:"Nicknamed \"Little Kumgang-san\" for its beauty, dotted with shrines and old sites.", tags:["Shrines","Cliffs","National park"],
+  facts:["Woraksan National Park covers 28% of Danyang County."], real:null,
+  trail:{e:"Shrine Path", s:"Little Kumgang Cliffs", seg:["Park Gate","Shrine Path","Cliff Stairs","Peak Ridge"]},
+  lm:[["Buddhist shrines","Many Buddhist shrines and historical sites dot the slopes.","a","temple"],
+      ["Woraksan National Park","The park is the centerpiece of the mountain.","e","gate"],
+      ["The palace that was never built","The 10th-century Later Baekje king Kyon Hwon is said to have planned a palace here but never built it.","b","ruins"],
+      ["Woraksan summit","The highest peak is 1,094 m.","top","peak"]],
+  L:{sky:PAL.haze, top:"#4f9a5b", dirt:"#8a7f70", stone:"#a8a8a2", far:"#b8c0b8", far2:"#cdd3cc", lay:["hills","cliff"], trees:["#2b6f3f","#3a8750"], tt:"oak",
+     path:[[0,"dirt"],[.4,"plank"]], rail:"wood", prof:{up:.5,dn:.12,ledge:.16,flat:.03,hs:.6,end:"cliff"}, obs:["rock","boulder"], amb:"mist", fx:"birds",
+     flo:["#ffffff"], ex:[], emb:"cliff"}},
+ {id:"mudeungsan", em:"🧱", n:"무등산", en:"Mudeungsan", h:1187, hs:"1,187 m", r:"Gwangju · South Jeolla", ll:[126.988,35.134], d:[0,0], seed:13,
+  blurb:"A broad, soft mountain known for its rock columns. The real top is closed, so hikers go to Seoseokdae.", tags:["Rock columns","National park","Island view"],
+  facts:["Provincial park in 1972; national park on 31 December 2012.","The page says Hallasan on Jeju Island can be seen from the summit."], real:null,
+  trail:{e:"Meadow Road", s:"Pillar Climb", seg:["Trailhead","Rolling Hills","Stone Pillars","Seoseokdae"]},
+  lm:[["National park since 2012","It became a provincial park in 1972 and a national park on 31 December 2012.","a","gate"],
+      ["Columnar jointing","The mountain's rock columns are protected as Natural Monument No. 465.","s","cols"],
+      ["The closed summit","Cheonwang summit (1,187 m) is a military zone. Without special permission, hikers can reach Seoseokdae at 1,100 m.","b","gate"],
+      ["Seoseokdae","The highest spot hikers can reach without special permission, at 1,100 m.","top","cols"]],
+  L:{sky:PAL.gold, top:"#8fae4e", dirt:"#8a6e4a", stone:"#7e7a72", far:"#c09a6a", far2:"#d6b88a", lay:["hills","ridge"], trees:["#5a8f45","#78a850"], tt:"oak",
+     path:[[0,"dirt"],[.5,"stone"]], rail:null, prof:{up:.5,dn:.1,ledge:.1,flat:.06,hs:.58,end:"steps"}, obs:["pillar","rock"], amb:"wind", fx:"island",
+     flo:["#ffd23f","#ffffff"], ex:[], emb:"pillars"}},
+ {id:"chiaksan", em:"🦚", n:"치악산", en:"Chiaksan", h:1288, hs:"1,288 m", r:"Gangwon (Wonju · Hoengseong)", ll:[128.052,37.365], d:[0,0], seed:17,
+  blurb:"A forested Gangwon mountain whose name uses the character for \"pheasant\".", tags:["Deep forest","Pheasant name","Gangwon"],
+  facts:["The name 雉岳山 starts with 雉, the hanja for pheasant."], real:null,
+  trail:{e:"Pheasant Forest", s:"Rocky Shortcut", seg:["Forest Gate","Deep Forest","Rocky Slope","Summit"]},
+  lm:[["Pheasant Mountain","The name 雉岳山 uses 雉, the hanja for pheasant.","a","pheasant"],
+      ["Two counties","The mountain's area extends across Wonju and Hoengseong County.","b","gate"],
+      ["Chiaksan summit","The highest point is 1,288 m.","top","peak"]],
+  L:{sky:PAL.mist, top:"#4f9a5b", dirt:"#6e5238", stone:"#6a6a64", far:"#7fb08a", far2:"#9cc8a2", lay:["hills","ridge"], trees:["#2b6f3f","#3a8750","#4a9a55"], tt:"pine",
+     path:[[0,"dirt"]], rail:null, prof:{up:.5,dn:.14,ledge:.04,flat:.06,hs:.58,end:"plain"}, obs:["roots","log"], amb:"leaves", fx:"pheasants",
+     flo:["#ffffff","#ffd23f"], ex:[], emb:"pheasant"}},
+ {id:"gayasan", em:"🛕", n:"가야산", en:"Gayasan", h:1430, hs:"1,430 m", r:"South Gyeongsang · North Gyeongsang", ll:[128.117,35.824], d:[0,0], seed:14,
+  blurb:"Home of Haeinsa temple, which keeps a famous library of wooden printing blocks.", tags:["Haeinsa temple","Waterfall","Castle ruins"],
+  facts:["National park since 13 October 1972."], real:null,
+  trail:{e:"Valley Road", s:"Castle Ridge", seg:["Haein Gate","Valley Road","Wall Stairs","Stone Peak"]},
+  lm:[["Hongnyudong Valley","A valley in Gayasan National Park.","a","creek"],
+      ["Yongmun Falls","A waterfall in Gayasan National Park.","e","falls"],
+      ["Gayasan Castle","Ruins of Gayasan Castle, with stone walls near Chilbulbong peak.","s","wall"],
+      ["Haeinsa","Founded in 802. Its Janggyeong Panjeon halls hold the Tripitaka Koreana woodblocks (about 81,000), a UNESCO World Heritage Site since 1995.","b","temple"],
+      ["Sangwangbong","1,430 m. The neighbouring Chilbulbong is listed slightly higher, at 1,433 m.","top","peak"]],
+  L:{sky:PAL.teal, top:"#5aa060", dirt:"#7e6a52", stone:"#8a8d92", far:"#8aa8b0", far2:"#a9c2c8", lay:["jag","hills"], trees:["#2f7d45","#46955a"], tt:"pine",
+     path:[[0,"dirt"],[.35,"stone"],[.7,"slab"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.1,flat:.04,hs:.58,end:"plain"}, obs:["boulder","rock"], amb:"mist", fx:"sparkle",
+     flo:["#ffffff"], ex:["wall"], wall:[.7,.92], emb:"scroll"}},
+ {id:"sobaeksan", em:"🔭", n:"소백산", en:"Sobaeksan", h:1439, hs:"1,439 m", r:"North Chungcheong · North Gyeongsang", ll:[128.485,36.956], d:[0,0], seed:6,
+  blurb:"A long, wide mountain of the Sobaek range with an astronomy observatory on top.", tags:["Wide ridges","Observatory","Big skies"],
+  facts:["The Korea Astronomy and Space Science Institute operates an observatory on the mountain."], real:null,
+  trail:{e:"Meadow Road", s:"Ridge Shortcut", seg:["Trailhead","Wide Meadow","Wind Ridge","Observatory Peak"]},
+  lm:[["The Sobaek range","Sobaeksan lies between Danyang County (North Chungcheong) and Yeongju (North Gyeongsang).","a","gate"],
+      ["Sobaeksan Observatory","The Korea Astronomy and Space Science Institute operates an observatory on the mountain.","top","obs"]],
+  L:{sky:PAL.steel, top:"#8fbf5a", dirt:"#8a6e48", stone:"#8a8a8a", far:"#9fb4cc", far2:"#b8c8dc", lay:["ridge","ridge"], trees:["#5a8f45"], tt:"shrub",
+     path:[[0,"grass"]], rail:null, prof:{up:.5,dn:.1,ledge:0,flat:.08,hs:.5,end:"long"}, obs:["rock","log"], amb:"wind", fx:"stars",
+     flo:["#ff9ab8","#ffffff","#ffd23f"], ex:[], emb:"telescope"}},
+ {id:"odaesan", em:"🍂", n:"오대산", en:"Odaesan", h:1563, hs:"1,563 m", r:"Gangwon (Gangneung · Pyeongchang · Hongcheon)", ll:[128.543,37.798], d:[0,0], seed:18,
+  blurb:"Soft, rounded forest peaks around a deep valley, with old temples and golden autumns.", tags:["Rounded peaks","Temples","Golden leaves"],
+  facts:["Wikipedia notes October is the month for red, gold and yellow foliage.","The peaks are rounded, with no steep high mountainsides."], real:null,
+  trail:{e:"Valley Walk", s:"Five-Peak Climb", seg:["Temple Gate","Gold Forest","Ridge Steps","Biro Peak"]},
+  lm:[["Woljeongsa","Founded by Master Jajang in 643 CE, at the park's entrance.","a","temple"],
+      ["Guryong Falls","In Sogeumgang Valley, a favourite of hikers.","e","falls"],
+      ["Sangwonsa","The temple at the park's northern end.","s","temple"],
+      ["Closed wetlands","Three peat fens were designated Ramsar wetlands in 2008. They are closed to the public.","b","gate"],
+      ["Biro-bong","The highest peak, 1,563 m, one of five main peaks around a deep valley.","top","peak"]],
+  L:{sky:PAL.gold, top:"#c9a23a", dirt:"#7a5a35", stone:"#7a7468", far:"#d8b070", far2:"#e6c88c", lay:["hills","hills"], trees:["#e0a82a","#f0c64a","#4a9a55"], tt:"oak",
+     path:[[0,"leaf"],[.5,"dirt"],[.7,"plank"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.05,flat:.05,hs:.55,end:"plain"}, bridge:1, obs:["log","roots"], amb:"leaves", fx:"gold",
+     flo:null, ex:[], emb:"fivepeaks"}},
+ {id:"taebaeksan", em:"❄️", n:"태백산", en:"Taebaeksan", h:1567, hs:"1,566.7 m", r:"Gangwon · North Gyeongsang", ll:[128.917,37.096], d:[0,0], seed:4,
+  blurb:"A snowy mountain with ancient altars, twisted yew trees and a winter snow festival.", tags:["Snow","Ancient altars","Yew trees"],
+  facts:["South Korea's 22nd national park (22 August 2016).","Winter brings rime frost on twisted trees; spring brings blossoms."], real:null,
+  trail:{e:"Snow Pine Lane", s:"Frozen Steps", seg:["Danggol Gate","Spruce Woods","Wind Ridge","Altar Peak"]},
+  lm:[["Danggol & the Snow Festival","The Danggol entrance hosts an annual snow festival and a coal mining museum.","a","snowman"],
+      ["Manggyeongsa","A temple at 1,460 m. Its \"Dragon Spring\" is described as the highest spring in South Korea.","e","temple"],
+      ["Ancient yew trees","Ancient yew trees and azalea bushes grow along the summit ridge.","s","yew"],
+      ["Cheonjedan","Ancient shamanist altars stand on the highest peaks.","top","altar"]],
+  L:{sky:PAL.cold, top:"#f4f8fc", dirt:"#a89880", stone:"#7a7f86", far:"#c0d0e0", far2:"#d3e0ec", lay:["ridge","hills"], trees:["#3c7455","#2f5f48"], tt:"spruce", snowy:1,
+     path:[[0,"snow"]], rail:"wood", prof:{up:.5,dn:.1,ledge:.03,flat:.06,hs:.55,end:"long"}, obs:["snow","rock"], amb:"snow", fx:"snow",
+     flo:null, ex:[], emb:"altar"}},
+ {id:"deogyusan", em:"🎿", n:"덕유산", en:"Deogyusan", h:1614, hs:"1,614 m", r:"North Jeolla · South Gyeongsang", ll:[127.746,35.859], d:[0,0], seed:5,
+  blurb:"A ridge-after-ridge mountain on the Baekdu-daegan, with a winter ski resort.", tags:["Many ridges","Ski resort","Waterfall"],
+  facts:["National park since 1975.","Wikipedia lists 893 plant species on the mountain."], real:null,
+  trail:{e:"Ski Road", s:"Fortress Ridge", seg:["Resort Gate","Snow Forest","Frosty Ridge","Hyangjeok Peak"]},
+  lm:[["Muju ski resort","Muju is a winter ski resort on the mountain.","a","lift"],
+      ["Chiryeon Waterfall","A waterfall in Deogyusan National Park.","e","falls"],
+      ["Cheoksan fortress","A mountain fortress on Deogyusan.","s","wall"],
+      ["The Baekdu-daegan","Deogyusan stands on the Baekdu-daegan, the mountainous spine of the Korean Peninsula.","b","gate"],
+      ["Hyangjeokbong","The highest peak, 1,614 m.","top","peak"]],
+  L:{sky:PAL.snowy, top:"#eef4fa", dirt:"#8a7f70", stone:"#7a8088", far:"#aab8d8", far2:"#c4d0e8", lay:["hills","ridge"], trees:["#3c7455"], tt:"spruce", snowy:1,
+     path:[[0,"snow"],[.5,"dirt"],[.8,"snow"]], rail:"wood", prof:{up:.5,dn:.12,ledge:.04,flat:.05,hs:.58,end:"plain"}, obs:["snow","log"], amb:"snow", fx:"alpen",
+     flo:null, ex:["ski"], emb:"ski"}},
+ {id:"seoraksan", em:"⛰️", n:"설악산", en:"Seoraksan", h:1708, hs:"1,708 m", r:"Gangwon (near Sokcho)", ll:[128.465,38.119], d:[0,0], seed:3,
+  blurb:"Towering rock formations, waterfalls and some of Korea's best autumn trips.", tags:["Jagged rock","Waterfalls","Autumn colours"],
+  facts:["National park since 24 March 1970; a UNESCO biosphere reserve since 1982.","Typically among the best autumn-foliage trips from Seoul, says iVisitKorea."],
+  real:{t:"Dinosaur Ridge (an advanced route): park signs list 5.1 km and a 5-hour hike", s:"Wikipedia: Seoraksan"},
+  trail:{e:"Valley Walk", s:"Ulsan Stairs", seg:["Maple Valley","Stream Bridge","Cliff Edge","Peak Ridge"]},
+  lm:[["Heundeulbawi","A round rock about 5 m high, balanced on a bigger rock. With effort, it can be rocked.","a","heund"],
+      ["Biryong Falls","On the valley's southern side, about a 40-minute walk from the main car park.","e","falls"],
+      ["Ulsanbawi","A famous rock formation. The climb has over 800 steps (888, say locals).","s","ulsan"],
+      ["Sinheungsa","A temple near the main entrance, with a large bronze Buddha.","b","buddha"],
+      ["Daecheongbong","The highest peak, 1,708 m, third highest in South Korea.","top","spire"]],
+  L:{sky:PAL.haze, top:"#d98a3a", dirt:"#6d788c", stone:"#8591a6", far:"#a8b8cf", far2:"#c0cde0", lay:["jag","needle"], trees:["#e0612a","#f2a53a","#3f8d4a"], tt:"maple",
+     path:[[0,"dirt"],[.3,"plank"],[.55,"slab"],[.8,"plank"]], rail:"wood", prof:{up:.5,dn:.18,ledge:.2,flat:.03,hs:.62,end:"spire"}, bridge:1, obs:["boulder","rock"], amb:"leaves", fx:"embers",
+     flo:null, ex:[], emb:"spire"}},
+ {id:"jirisan", em:"🌲", n:"지리산", en:"Jirisan", h:1915, hs:"1,915 m", r:"North Jeolla · South Jeolla · South Gyeongsang", ll:[127.73,35.337], d:[0,0], seed:2,
+  blurb:"A vast forested mountain: long misty ridges and South Korea's first, and largest, national park.", tags:["Misty ridges","Huge forest","Sea of clouds"],
+  facts:["Became South Korea's first national park in 1967; today it is the largest.","About 1,500 kinds of plants, many of them endemic."],
+  real:{t:"Samsinbong day hike from Ssanggyesa: about 4 hours up and 3 hours down (18.4 km round trip)", s:"Wikipedia: Jirisan"},
+  trail:{e:"Long Forest Road", s:"Ridge Shortcut", seg:["Deep Forest","Misty Meadow","Ridge Line","Summit Ridge"]},
+  lm:[["Hwaeomsa","The largest and best-known of the seven major temples on Jirisan.","a","temple"],
+      ["Baemsagol Valley","A valley in Jirisan National Park.","e","creek"],
+      ["Samsinbong","\"Three Spirits Peak\", 1,284 m.","s","peak"],
+      ["Nogodan sea of clouds","One of the ten scenic views promoted for Jirisan.","b","clouds"],
+      ["Cheonwangbong","The highest peak, 1,915 m, the tallest on the mainland. Its sunrise is one of Jirisan's ten scenic views.","top","peak"]],
+  L:{sky:PAL.mist, top:"#5fb04f", dirt:"#7a5a3a", stone:"#6a6a6a", far:"#7fb48a", far2:"#9ec9a6", lay:["hills","hills"], trees:["#2e7d32","#43a047"], tt:"oak",
+     path:[[0,"dirt"]], rail:null, prof:{up:.45,dn:.3,ledge:0,flat:.06,hs:.5,end:"long"}, bridge:1, obs:["mud","roots"], amb:"fog", fx:"clouds",
+     flo:["#ffffff","#ffd23f"], ex:[], emb:"cloud"}},
+ {id:"hallasan", em:"🌋", n:"한라산", en:"Hallasan", h:1947, hs:"1,947 m", r:"Jeju Province", ll:[126.533,33.362], d:[0,0], seed:1,
+  blurb:"South Korea's highest peak: a shield volcano with a crater lake on top.", tags:["Volcano","Crater lake","Oreum cones"],
+  facts:["The summit crater is over 400 m wide.","Plants change from subtropical at the coast to alpine at the top."],
+  real:{t:"Seongpanak trail: 9.6 km, about 4.5 hours one way. Gwaneumsa trail: 8.7 km, about 5 hours one way", s:"Wikipedia: Hallasan National Park"},
+  trail:{e:"Pine & Lava Path", s:"Crater Rim Climb", seg:["Oak Forest","Lava Fields","Crater Rim","Summit Cone"]},
+  lm:[["Gwaneumsa","The island's oldest Buddhist temple, rebuilt in 1908.","a","temple"],
+      ["Oreum cones","About 360 small volcanic cones (oreum) dot Hallasan's flanks.","e","cones"],
+      ["Roe deer","Roe deer are the largest mammal living on the mountain.","s","deer"],
+      ["A volcano in a World Heritage Site","Hallasan is part of Jeju Volcanic Island and Lava Tubes, a UNESCO World Heritage Site since 2007.","b","gate"],
+      ["Baengnokdam","The crater lake at the summit.","top","lake"]],
+  L:{sky:PAL.teal, top:"#4b4343", dirt:"#5a4a42", stone:"#3f3838", far:"#6fa86f", far2:"#8fc08c", lay:["cones","shield"], trees:["#4f8f45","#6aa650"], tt:"shrub",
+     path:[[0,"dirt"],[.25,"lava"],[.6,"plank"],[.8,"lava"]], rail:"wood", prof:{up:.55,dn:.04,ledge:.03,flat:.04,hs:.6,end:"crater"}, obs:["lava","rock"], amb:"wind", fx:"lake",
+     flo:["#ffd23f","#ff9ab8"], ex:[], emb:"crater"}}
+];
+// map positions (the little Korea map is 180 x 306 units)
+var mountains = MS.map(function(a){
+  var x = (a.ll[0]-125.6)*41+5+a.d[0], y = (38.8-a.ll[1])*51+3+a.d[1];
+  a.x = Math.round(x); a.y = Math.round(y); a.lv = a.h < 900 ? 0 : a.h < 1450 ? 1 : 2; a.L.id = a.id; a.NN = 24 + Math.round(a.h/100); return a;
+});
+function mByName(n){ for(var i = 0; i < mountains.length; i++) if(mountains[i].n === n || mountains[i].id === n) return mountains[i]; return null; }
+var FUNNY = ["Beautiful view, terrible stairs.","Stay hydrated. The hiker is watching.","Summit: that way. (It is up.)","Legs: 0 · Mountain: 1","Snack break? You've earned it.","You are 100% closer than when you started.","Warning: may cause sudden love for hiking.","Pro tip: the mountain is not going anywhere.","Don't look down. Look at the view.","Fresh air loading... 72%"];
+var RANKS = [[0,"Trail Rookie"],[1,"First Steps"],[3,"Weekend Hiker"],[6,"Ridge Walker"],[10,"Summit Seeker"],[15,"Mountain Master"],[20,"Korea Legend"]];
+function rankOf(n){ var r = RANKS[0][1]; RANKS.forEach(function(a){ if(n >= a[0]) r = a[1]; }); return r; }
+
+/* ==== art1.js ==== */
+
+// ---------- pixel art 1: block textures, trees, far-away layers ----------
+var texCache = {};
+function mkTex(ts, key, base, dark, light, seed, strip, o){
+  key += "|" + ts; if(texCache[key]) return texCache[key]; o = o || {};
+  var cv = document.createElement("canvas"); cv.width = cv.height = ts; var c = cv.getContext("2d"), r = rng(seed), sp = ts >= 12 ? 2 : 1, i, n;
+  c.fillStyle = base; c.fillRect(0, 0, ts, ts);
+  for(i = 0, n = Math.round(ts*ts/7); i < n; i++){ c.fillStyle = r() < .5 ? dark : light; c.fillRect(Math.floor(r()*(ts-sp)), Math.floor(r()*(ts-sp)), sp, sp); }
+  if(o.rows){ c.fillStyle = o.rows; for(i = 3; i < ts; i += 4) c.fillRect(0, i, ts, 1); }
+  if(o.grid){ c.fillStyle = o.grid; c.fillRect(0, Math.floor(ts*.55), ts, 1); c.fillRect(Math.floor(ts*.5), 0, 1, Math.floor(ts*.55)); c.fillRect(Math.floor(ts*.25), Math.floor(ts*.55), 1, ts); }
+  if(strip){ var sh = Math.max(2, Math.round(ts*.3)); c.fillStyle = strip; c.fillRect(0, 0, ts, sh); for(i = 0; i < Math.max(2, ts/3); i++) c.fillRect(Math.floor(r()*(ts-1)), sh, 1, 1+(r() < .5 ? 1 : 0));
+    if(o.spk){ for(i = 0; i < Math.max(2, ts/2); i++){ c.fillStyle = o.spk[Math.floor(r()*o.spk.length)]; c.fillRect(Math.floor(r()*(ts-1)), Math.floor(r()*sh), sp, sp); } }
+    c.fillStyle = "rgba(255,255,255,.22)"; c.fillRect(0, 0, ts, 1); }
+  else if(o.spk){ for(i = 0; i < Math.max(3, ts/2); i++){ c.fillStyle = o.spk[Math.floor(r()*o.spk.length)]; c.fillRect(Math.floor(r()*(ts-1)), Math.floor(r()*(ts-1)), sp, sp); } }
+  c.fillStyle = "rgba(0,0,0,.2)"; c.fillRect(0, ts-1, ts, 1); c.fillRect(ts-1, 0, 1, ts);
+  return texCache[key] = cv;
+}
+function topTex(L, kind, ts){
+  var id = L.id;
+  switch(kind){
+    case "grass": return mkTex(ts, id+"gr", L.dirt, shade(L.dirt, -20), shade(L.dirt, 14), 3, "#7fcf55");
+    case "snow": return mkTex(ts, id+"sn", L.dirt, shade(L.dirt, -20), shade(L.dirt, 14), 3, "#f4f8fc");
+    case "leaf": return mkTex(ts, id+"lf", L.dirt, shade(L.dirt, -20), shade(L.dirt, 14), 3, L.top, {spk:L.trees});
+    case "brick": return mkTex(ts, id+"br", "#cbbd9d", "#b3a583", "#e3d8bb", 4, "#e9dfc4", {grid:"#a89a78"});
+    case "stone": return mkTex(ts, id+"st", shade(L.stone, 16), shade(L.stone, -12), shade(L.stone, 30), 6, shade(L.stone, 34), {grid:shade(L.stone, -22)});
+    case "slab": return mkTex(ts, id+"sl", "#bdbdb7", "#a3a39d", "#d2d2cc", 8, "#d9d9d3");
+    case "plank": return mkTex(ts, "plank", "#a8783c", "#8a5f2c", "#c08c4c", 9, "#c99a5a", {rows:"#7a5424"});
+    case "lava": return mkTex(ts, id+"lv", "#2f2a2a", "#201c1c", "#4b4343", 12, "#4b4343", {spk:["#e8641e","#ffb347","#4b4343"]});
+    case "alp": return mkTex(ts, id+"al", L.stone, shade(L.stone, -22), shade(L.stone, 18), 7, L.snowy ? "#f4f8fc" : shade(L.stone, 30));
+    case "water": return mkTex(ts, "wa", "#3d7fd6", "#3873c4", "#5a9af0", 11);
+    case "dirt": return mkTex(ts, id+"dt", L.dirt, shade(L.dirt, -20), shade(L.dirt, 14), 5);
+    case "stone0": return mkTex(ts, id+"s0", L.stone, shade(L.stone, -22), shade(L.stone, 18), 7);
+    default: return mkTex(ts, id+"dtp", L.dirt, shade(L.dirt, -18), shade(L.dirt, 16), 3, L.top);
+  }
+}
+function leafTex(ts, col){ return mkTex(ts, "lf"+col, col, shade(col, -35), shade(col, 38), 13); }
+function alpCol(M, i){ var h = (i < 0 || i >= M.NT) ? 0 : M.hall[i]; return h/M.sumH > .74; }
+
+// ---------- trees (each mountain uses its own kind) ----------
+function drawTree(c, V, L, d, sx, sy){
+  var ts = V.TS, cx = sx+ts/2, tw = Math.max(2, Math.round(ts*.45)), tex = leafTex(ts, d.col), tt = L.tt, j, snowy = L.snowy;
+  function lb(x, y){ c.drawImage(tex, Math.round(x), Math.round(y)); }
+  if(tt === "shrub"){ lb(cx-ts, sy-ts); lb(cx, sy-ts); lb(cx-ts*.5, sy-2*ts); R(c, cx-1, sy-1, 2, 1, "#4a3a28"); return; }
+  if(tt === "pine"){
+    R(c, cx-tw/2, sy-3.5*ts, tw, 3.5*ts, "#9a5a34"); R(c, cx-tw/2, sy-3.5*ts, 1, 3.5*ts, "#7a4426"); R(c, cx+tw/2-1, sy-2*ts, ts*.6, 2, "#9a5a34");
+    lb(cx-2*ts, sy-3*ts); lb(cx-ts, sy-3*ts); lb(cx+ts*.2, sy-4*ts); lb(cx+1.2*ts, sy-4*ts); lb(cx-ts, sy-4.8*ts); lb(cx, sy-4.8*ts);
+    return;
+  }
+  if(tt === "maple"){
+    R(c, cx-tw/2, sy-2.5*ts, tw, 2.5*ts, "#6b4a2b");
+    for(j = 0; j < 3; j++) lb(cx-1.5*ts+j*ts, sy-3*ts); for(j = 0; j < 4; j++) lb(cx-2*ts+j*ts, sy-4*ts); for(j = 0; j < 2; j++) lb(cx-ts+j*ts, sy-5*ts);
+    return;
+  }
+  if(tt === "yew"){
+    R(c, cx-tw, sy-2.4*ts, tw*2, 2.4*ts, "#5a3d22"); R(c, cx-tw*1.6, sy-1.2*ts, tw, 3, "#5a3d22");
+    for(j = 0; j < 4; j++) lb(cx-2*ts+j*ts, sy-3.4*ts); for(j = 0; j < 2; j++) lb(cx-ts+j*ts, sy-4.4*ts);
+    R(c, cx-2*ts, sy-3.4*ts, 4*ts, 2, "#fff"); R(c, cx-ts, sy-4.4*ts, 2*ts, 2, "#fff"); return;
+  }
+  R(c, cx-tw/2, sy-2*ts, tw, 2*ts, "#6b4a2b"); R(c, cx-tw/2, sy-2*ts, 1, 2*ts, "#553a22");
+  if(tt === "spruce"){
+    for(j = 0; j < 3; j++) lb(cx-ts*1.5+j*ts, sy-3*ts); for(j = 0; j < 2; j++) lb(cx-ts+j*ts, sy-4*ts); lb(cx-ts/2, sy-5*ts);
+    if(snowy){ R(c, cx-ts/2, sy-5*ts, ts, 2, "#fff"); R(c, cx-ts, sy-4*ts, 2*ts, 2, "#fff"); R(c, cx-ts*1.5, sy-3*ts, 3*ts, 2, "#fff"); }
+  } else { for(j = 0; j < 3; j++) lb(cx-ts*1.5+j*ts, sy-3*ts); for(j = 0; j < 2; j++) lb(cx-ts+j*ts, sy-4*ts); }
+}
+
+// ---------- far-away layers: every kind has its own silhouette ----------
+function farLayer(c, V, kind, col, amp, seed, base){
+  var w = V.w, h = V.h, r = rng(seed*131+7), x, i, hg, hs = [], cap = shade(col, 14), q = 4, lines = null;
+  var n = Math.ceil(w/q), arr = [];
+  for(i = 0; i < n; i++) arr.push(0);
+  function mx(i2, v){ if(v > arr[i2]) arr[i2] = v; }
+  if(kind === "hills"){ for(i = 0; i < n; i++){ x = i*q; arr[i] = Math.floor((amp*(.45+Math.abs(Math.sin(x/(70+seed*3)+seed))*.8)+Math.abs(Math.sin(x/19+seed*.3))*6)/4)*4; } }
+  else if(kind === "ridge"){ for(i = 0; i < n; i++){ x = i*q; arr[i] = Math.floor((amp*.55+Math.sin(x/90+seed)*amp*.25+Math.sin(x/23+seed)*3)/4)*4; } }
+  else if(kind === "jag"){
+    var p = 30+seed%9, p2 = 47+seed%7;
+    for(i = 0; i < n; i++){ x = i*q; var t = (x/p+seed*.37)%1, tri = t < .5 ? t*2 : (1-t)*2, t2 = (x/p2+seed*.71)%1, tri2 = t2 < .5 ? t2*2 : (1-t2)*2; arr[i] = Math.floor(Math.max(amp*(.28+.72*Math.pow(tri, 1.3)), amp*.9*(.2+.8*Math.pow(tri2, 1.5)))/3)*3; }
+  }
+  else if(kind === "needle" || kind === "peaks" || kind === "dome" || kind === "cones"){
+    var cnt = kind === "dome" ? Math.ceil(w/68) : kind === "peaks" ? 9 : kind === "cones" ? 11 : Math.ceil(w/24);
+    for(var k = 0; k < cnt; k++){
+      var cx = kind === "peaks" ? (k+.5)*w/cnt+(r()-.5)*10 : (k+r()*.9)*w/cnt, ht, rw;
+      if(kind === "needle"){ ht = amp*(.55+r()*.7); rw = 5+Math.floor(r()*5); } else if(kind === "dome"){ ht = amp*(.65+r()*.45); rw = 26+r()*18; }
+      else if(kind === "peaks"){ ht = amp*(.7+r()*.3); rw = w/cnt*.75; } else { ht = amp*(.35+r()*.5); rw = 12+r()*10; }
+      for(i = 0; i < n; i++){ x = i*q+2; var dx = Math.abs(x-cx), v = 0;
+        if(kind === "needle") v = ht*Math.max(0, 1-dx/rw); else if(kind === "cones") v = Math.min(ht*.88, ht*Math.max(0, 1.1-dx/rw)); else v = ht*Math.sqrt(Math.max(0, 1-(dx/rw)*(dx/rw)));
+        mx(i, Math.floor(v/3)*3); }
+    }
+    var b0 = kind === "needle" ? .22 : kind === "cones" ? .16 : .2;
+    for(i = 0; i < n; i++) if(arr[i] < amp*b0) arr[i] = Math.floor((amp*b0+Math.sin(i*.37+seed)*3)/3)*3;
+    if(kind === "needle") lines = true;
+  }
+  else if(kind === "shield"){ var sc = w*(.5+(seed%5)*.02); for(i = 0; i < n; i++){ x = i*q; arr[i] = Math.floor((amp*Math.max(0, 1-Math.pow(Math.abs(x-sc)/(w*.62), 1.5))+amp*.12)/3)*3; } }
+  else if(kind === "city"){
+    var xx = 0; while(xx < n){ var bw = 2+Math.floor(r()*4), bh = Math.floor(amp*(.22+r()*r()*.78)/3)*3; for(i = xx; i < Math.min(n, xx+bw); i++) arr[i] = bh; xx += bw+(r() < .25 ? 1 : 0); }
+    lines = "city";
+  }
+  else if(kind === "cliff"){
+    var xs = 0; while(xs < n){ var sw = 4+Math.floor(r()*6), sh2 = Math.floor(amp*(.4+r()*.8)/3)*3; for(i = xs; i < Math.min(n, xs+sw); i++) arr[i] = sh2; xs += sw; }
+    lines = "cliff";
+  }
+  c.fillStyle = col;
+  for(i = 0; i < n; i++){ c.fillRect(i*q, base-arr[i], q, h); }
+  c.fillStyle = cap; for(i = 0; i < n; i++){ c.fillRect(i*q, base-arr[i], q, 2); }
+  if(lines === "city"){
+    c.fillStyle = shade(col, 22); var r2 = rng(seed*17);
+    for(i = 0; i < n; i++){ var top = base-arr[i]; if(arr[i] > 14) for(var yy = top+5; yy < base-2; yy += 6){ if(r2() < .45) c.fillRect(i*q+1, yy, 2, 2); } }
+  } else if(lines === "cliff"){
+    c.fillStyle = shade(col, -16); for(i = 0; i < n; i++){ for(var y2 = base-arr[i]+7; y2 < base; y2 += 7) c.fillRect(i*q, y2, q, 1); if(i && Math.abs(arr[i]-arr[i-1]) > 4) c.fillRect(i*q, base-Math.max(arr[i], arr[i-1]), 1, Math.abs(arr[i]-arr[i-1])); }
+  } else if(lines){
+    c.fillStyle = shade(col, -14); for(i = 1; i < n; i += 2){ if(arr[i] > amp*.4) c.fillRect(i*q, base-arr[i]+3, 1, Math.min(arr[i]-3, 14)); }
+  }
+}
+
+/* ==== art2.js ==== */
+
+// ---------- pixel art 2: landmarks (every one is drawn standing on the trail at x,y) ----------
+function qf(c, x, y){ return function(a, b, w, h, col){ c.fillStyle = col; c.fillRect(Math.round(x+a), Math.round(y+b), w, h); }; }
+var ROOF = "#3d4a55", ROOF2 = "#4a5866", ROOF3 = "#5d6e80", RED = "#c8362b", WALL = "#f2ead6", PLAT = "#8d9199";
+function roof(Q, cx, by, w){
+  Q(cx-w/2-4, by-4, w+8, 4, ROOF); Q(cx-w/2-1, by-7, w+2, 3, ROOF2); Q(cx-w/2+3, by-9, w-6, 2, ROOF3); Q(cx-w/2+3, by-10, w-6, 1, "#2e3943");
+  Q(cx-w/2-6, by-5, 3, 2, ROOF); Q(cx+w/2+3, by-5, 3, 2, ROOF); Q(cx-w/2-4, by, w+8, 1, "#2a323a");
+}
+function house(Q, a, w, h){ Q(a, -h, w, h, WALL); Q(a+w/2-2, -6, 4, 6, "#7a3a22"); Q(a-2, -h-4, w+4, 4, ROOF); Q(a+1, -h-6, w-2, 2, ROOF2); }
+function pheasantSprite(c, x, y, dir, f){
+  var Q = qf(c, x, y), d = dir >= 0 ? 1 : -1;
+  function P(a, b, w, h, col){ c.fillStyle = col; c.fillRect(Math.round(x+(d > 0 ? a : -a-w)), Math.round(y+b), w, h); }
+  P(-4, -8, 9, 5, "#a0522d"); P(-4, -8, 9, 1, "#c4743f"); P(4, -11, 3, 5, "#2e6f5a"); P(5, -13, 4, 3, "#2e6f5a"); P(8, -12, 1, 1, "#222"); P(7, -11, 2, 1, "#d9503f");
+  P(-12, -7, 8, 2, "#c68a4a"); P(-11, -6, 7, 1, "#8a5a2a"); P(-2, -3, 1, 3+(f ? 1 : 0), "#6a4a22"); P(2, -3, 1, 3+(f ? 0 : 1), "#6a4a22");
+}
+var LMK = {};
+LMK.temple = function(c, x, y, t){ var Q = qf(c, x, y), w = 26;
+  Q(-w/2-3, -3, w+6, 3, PLAT); Q(-w/2, -14, w, 11, WALL); Q(-w/2+1, -14, 2, 11, RED); Q(w/2-3, -14, 2, 11, RED); Q(-1, -14, 2, 11, RED);
+  Q(-w/2+4, -11, 6, 8, "#7a3a22"); Q(w/2-10, -11, 6, 8, "#7a3a22"); roof(Q, 0, -14, w);
+  Q(w/2+8, -14, 1, 11, "#555"); Q(w/2+6, -13, 5, 5, Math.sin(t*3) > 0 ? "#ffd36a" : "#ffb347"); };
+LMK.buddha = function(c, x, y, t){ var Q = qf(c, x, y), B = "#b8892f", D = "#8a6420", Lt = "#d6a94a", i;
+  Q(-12, -4, 24, 4, "#6d5a2a"); Q(-9, -7, 18, 3, "#7a6430"); Q(-8, -20, 16, 13, B); Q(-8, -20, 3, 13, Lt); Q(5, -20, 3, 13, D); Q(-12, -16, 5, 8, B); Q(7, -16, 5, 8, B);
+  Q(-4, -27, 8, 8, B); Q(-4, -27, 2, 8, Lt); Q(-2, -30, 4, 3, D); Q(-2, -24, 1, 1, "#2a1f1a"); Q(1, -24, 1, 1, "#2a1f1a");
+  for(i = 0; i < 8; i++){ var a = i/8*6.283; Q(Math.round(Math.cos(a)*12)-1, -24+Math.round(Math.sin(a)*12)-1, 2, 2, (Math.floor(t*2+i)%2) ? "#ffe9a0" : "#ffd36a"); } };
+LMK.falls = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  Q(-14, -34, 28, 34, "#6d788c"); Q(-14, -34, 28, 3, "#8591a6"); Q(10, -30, 4, 30, "#566074"); Q(-4, -34, 8, 31, "#bfe0ff");
+  for(i = 0; i < 6; i++){ var yy = (i*6+t*28)%30; Q(-3+((i*5)%4), -34+yy, 2, 4, "#fff"); }
+  Q(-11, -3, 22, 3, "#3d7fd6"); for(i = 0; i < 5; i++) Q(-10+((i*4+Math.floor(t*6))%19), -4-(i%2), 2, 1, "#fff"); };
+LMK.cones = function(c, x, y){ var Q = qf(c, x, y);
+  [[-22, 20, 14], [0, 28, 18], [20, 18, 12]].forEach(function(a){ for(var i = 0; i < a[2]; i++){ var w = Math.round((i+2)*a[1]/a[2]/2)*2; Q(a[0]-w/2, -a[2]+i, w, 1, i < 3 ? "#4a8a46" : "#5f9a52"); } Q(a[0]-2, -a[2], 4, 1, "#3a6a37"); }); };
+LMK.deer = function(c, x, y, t){ var Q = qf(c, x, y), hd = Math.sin(t*1.5) > .7 ? 3 : 0, B = "#b5835a", D = "#8a5f3c";
+  Q(-8, -12, 14, 6, B); Q(-8, -8, 14, 2, "#e9d2b0"); Q(-7, -6, 2, 6, D); Q(-3, -6, 2, 6, B); Q(2, -6, 2, 6, D); Q(5, -6, 2, 6, B); Q(-10, -12, 2, 3, "#fff");
+  Q(5, -17+hd, 3, 7, B); Q(6, -19+hd, 6, 4, B); Q(11, -18+hd, 1, 1, "#222"); Q(7, -22+hd, 1, 3, D); Q(9, -22+hd, 1, 3, D); Q(8, -16+hd, 2, 1, "#e9d2b0"); };
+LMK.gate = function(c, x, y){ var Q = qf(c, x, y);
+  Q(-12, -24, 3, 24, RED); Q(9, -24, 3, 24, RED); Q(-12, -4, 3, 4, PLAT); Q(9, -4, 3, 4, PLAT); Q(-10, -23, 20, 2, "#a82a20"); Q(-10, -18, 20, 2, "#a82a20");
+  Q(-5, -14, 10, 4, "#e8d9a8"); Q(-4, -13, 8, 1, "#8a6a3a"); roof(Q, 0, -24, 24); };
+LMK.beacon = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  Q(-7, -18, 14, 18, "#8d9199"); Q(-7, -18, 14, 2, "#aab0b8"); for(i = 0; i < 3; i++) Q(-5+i*4, -13, 3, 5, "#33373d"); Q(-7, -18, 2, 18, "#a3a8b0"); Q(5, -18, 2, 18, "#6f747c");
+  for(i = 0; i < 4; i++){ var a = (t*.8+i*.25)%1, s = 4-Math.round(a*2); Q(-2+Math.round(Math.sin(t*2+i)*2), -20-Math.round(a*22), s, s, "rgba(215,215,215," + (1-a).toFixed(2) + ")"); } };
+LMK.cable = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  Q(-1, -34, 3, 34, "#6b6f76"); Q(-6, -34, 13, 2, "#555a62"); for(i = -40; i <= 40; i += 2) Q(i, -33+Math.round(i*.18), 2, 1, "#444");
+  var p = (t*.12)%1, gx = Math.round(-40+p*80), gy = -33+Math.round(gx*.18);
+  Q(gx, gy+1, 1, 4, "#444"); Q(gx-4, gy+5, 9, 6, "#ef4a3d"); Q(gx-3, gy+6, 7, 3, "#bfe6ff"); Q(gx-4, gy+5, 9, 1, "#fff"); };
+LMK.tower = function(c, x, y, t, st){ var Q = qf(c, x, y), lit = st && st.lit, i;
+  Q(-13, -7, 26, 7, "#cfd3da"); Q(-13, -7, 26, 2, "#e6e9ee"); Q(-9, -5, 18, 3, "#9aa0aa");
+  Q(-3, -34, 6, 28, "#d8dce2"); Q(-3, -34, 2, 28, "#eef0f4"); Q(1, -34, 2, 28, "#b9bec7");
+  Q(-8, -41, 16, 7, "#b5bcc8"); Q(-8, -41, 16, 2, "#d5dae2"); Q(-7, -38, 14, 3, "#7fb6f4"); Q(-5, -46, 10, 5, "#c8ced8"); Q(-4, -44, 8, 2, "#7fb6f4");
+  Q(-1, -58, 2, 12, "#8a8f98"); Q(-1, -59, 2, 2, (Math.floor(t*1.5)%2) ? "#ff4a4a" : "#7a1f1f");
+  if(lit){ var cols = ["#ff4a4a", "#ff9a3a", "#ffe14d", "#6ed05a", "#4aa8ff", "#a06aff"]; for(i = 0; i < 14; i++) Q(-3, -34+i*2, 6, 2, cols[(i+Math.floor(t*4))%6]); for(i = 0; i < 2; i++) Q(-8, -41+i*4, 16, 2, cols[(i*3+Math.floor(t*4))%6]); } };
+LMK.pav = function(c, x, y, t){ var Q = qf(c, x, y);
+  Q(-14, -3, 28, 3, "#a8783c"); Q(-14, -3, 28, 1, "#c08c4c"); [-12, -4, 3, 11].forEach(function(a){ Q(a, -15, 2, 12, RED); }); Q(-12, -9, 24, 1, "#a82a20"); roof(Q, 0, -15, 22);
+  Q(-22, 0, 44, 2, "#3d7fd6"); Q(-18+Math.round(Math.sin(t*2)*3), 0, 6, 1, "#9ad0ff"); };
+LMK.village = function(c, x, y, t){ var Q = qf(c, x, y); house(Q, -26, 13, 9); house(Q, -7, 15, 11); house(Q, 14, 12, 8); Q(10, -10, 1, 10, "#555"); Q(9, -12, 3, 3, Math.sin(t*3) > 0 ? "#ffd36a" : "#ffb347"); };
+LMK.well = function(c, x, y, t){ var Q = qf(c, x, y);
+  Q(-10, -13, 20, 13, "#8d9199"); Q(-10, -13, 20, 2, "#aab0b8"); Q(-8, -9, 3, 3, "#767b83"); Q(3, -6, 4, 3, "#767b83"); Q(-5, -15, 10, 2, "#a8782a"); Q(-4, -15, 8, 1, "#ffd23f");
+  if(Math.floor(t*4)%2){ Q(-2, -19, 1, 3, "#fff3a0"); Q(-3, -18, 3, 1, "#fff3a0"); } else { Q(3, -20, 1, 3, "#fff3a0"); Q(2, -19, 3, 1, "#fff3a0"); } };
+LMK.gomodang = function(c, x, y, t){ var Q = qf(c, x, y);
+  Q(-12, -3, 24, 3, "#8d9199"); Q(-8, -12, 16, 9, WALL); Q(-8, -12, 2, 9, RED); Q(6, -12, 2, 9, RED); Q(-3, -10, 6, 7, "#7a3a22"); roof(Q, 0, -12, 16);
+  Q(16, -18, 1, 18, "#555"); var w = Math.floor(t*3)%2; Q(17, -18, 6, 4, "#ef4a3d"); Q(17, -14+(w ? 0 : 1), 6, 3, "#ffd23f"); };
+LMK.fort = function(c, x, y){ var Q = qf(c, x, y), i;
+  Q(-22, -12, 44, 12, "#9a9a98"); Q(-22, -12, 44, 2, "#b5b5b2"); for(i = -22; i < 22; i += 6) Q(i, -15, 4, 3, "#9a9a98");
+  for(i = -22; i < 22; i += 8) Q(i, -8, 1, 8, "#838381"); for(i = -18; i < 22; i += 8) Q(i, -4, 8, 1, "#838381");
+  Q(-6, -18, 12, 18, "#8a8a88"); Q(-4, -11, 8, 11, "#2a2a2a"); Q(-5, -12, 10, 2, "#2a2a2a"); roof(Q, 0, -18, 12); };
+LMK.wall = function(c, x, y){ var Q = qf(c, x, y), i; Q(-26, -9, 52, 9, "#9a9a98"); Q(-26, -9, 52, 2, "#b5b5b2"); for(i = -26; i < 26; i += 6) Q(i, -12, 4, 3, "#9a9a98"); for(i = -26; i < 26; i += 9) Q(i, -6, 1, 6, "#838381"); };
+LMK.ruins = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  Q(-18, -3, 36, 3, "#9a9a98"); [[-14, 6], [-6, 9], [3, 5], [11, 7]].forEach(function(a){ Q(a[0], -3-a[1], 4, a[1], "#b0aea8"); Q(a[0], -3-a[1], 4, 1, "#cfcdc7"); });
+  if(Math.floor(t*2)%3){ var g = "rgba(255,255,255,.6)"; for(i = -16; i <= 16; i += 3) Q(i, -34, 1, 1, g); for(i = -12; i <= 12; i += 3) Q(i, -28, 1, 1, g); for(i = -16; i <= 16; i += 4) Q(i, -22, 1, 1, g); [-16, 16].forEach(function(ax){ for(var j = -34; j < -10; j += 3) Q(ax, j, 1, 1, g); }); } };
+LMK.cols = function(c, x, y){ var Q = qf(c, x, y), H = [22, 30, 26, 36, 28, 20, 24];
+  H.forEach(function(h, i){ var a = -21+i*6; Q(a, -h, 5, h, i%2 ? "#8a8780" : "#9b988f"); Q(a, -h, 5, 2, "#b8b5ac"); Q(a, -h, 1, h, "#b0ada4"); Q(a+4, -h+2, 1, h-2, "#6c6a64"); }); };
+LMK.sign = function(c, x, y){ var Q = qf(c, x, y); Q(-1, -20, 2, 20, "#6a4a22"); Q(-12, -30, 24, 13, "#2f6fb0"); Q(-12, -30, 24, 2, "#4a8ad0"); Q(-10, -27, 20, 2, "#fff"); Q(-10, -23, 14, 2, "#cfe3f7"); Q(-12, -17, 24, 1, "#1f4f80"); };
+LMK.needle = function(c, x, y){ var Q = qf(c, x, y);
+  [[-12, 26, 6], [0, 38, 7], [12, 22, 5]].forEach(function(a){ for(var i = 0; i < a[1]; i++){ var w = Math.max(2, Math.round(a[2]*(i/a[1])*1.0)+1); Q(a[0]-w/2, -a[1]+i, w, 1, "#a3a3a0"); } Q(a[0]+1, -a[1]+3, 1, a[1]-3, "#7f7f7c"); }); };
+LMK.dome = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  for(i = 0; i < 26; i++){ var hw = Math.round(Math.sqrt(1-Math.pow((26-i)/26, 2))*30); Q(-hw, -26+i, hw*2, 1, i < 4 ? "#d2d2cc" : "#bdbdb7"); }
+  for(i = 0; i < 5; i++) Q(-18+i*9, -22+i*3, 1, 10-i, "#a3a39d");
+  Q(-5, -13, 1, 9, "#e8e8e8"); Q(-6, -14, 2, 3, "#ef4a3d"); Q(-6, -17, 2, 2, "#f8d2b0"); Q(7, -10, 2, 3, "#3a6fd8"); Q(7, -13, 2, 2, "#f8d2b0"); };
+LMK.peak3 = function(c, x, y){ var Q = qf(c, x, y);
+  [[-16, 24, 9], [0, 36, 11], [16, 26, 9]].forEach(function(a, k){ for(var i = 0; i < a[1]; i++){ var w = Math.round(a[2]*i/a[1]*1.4)+1; Q(a[0]-w/2, -a[1]+i, w, 1, k === 1 ? "#c4c4be" : "#b0b0aa"); } Q(a[0]+1, -a[1]+3, 2, a[1]-3, "#8d8d88"); }); };
+LMK.peak = function(c, x, y){ var Q = qf(c, x, y);
+  Q(-8, -5, 16, 5, "#8d9199"); Q(-4, -18, 8, 13, "#b0b5bc"); Q(-4, -18, 8, 2, "#d2d6dc"); Q(-4, -18, 2, 13, "#c8ccd2"); Q(2, -18, 2, 13, "#8d9199"); Q(-3, -14, 6, 1, "#555"); Q(-3, -11, 6, 1, "#555"); Q(-3, -8, 4, 1, "#555"); };
+LMK.spire = function(c, x, y){ var Q = qf(c, x, y);
+  for(var i = 0; i < 40; i++){ var w = Math.max(3, Math.round(i*.5)+2); Q(-w/2, -40+i, w, 1, i < 3 ? "#d6dde8" : "#9aa6b8"); Q(w/2-3, -40+i, 3, 1, "#6d788c"); } };
+LMK.ulsan = function(c, x, y){ var Q = qf(c, x, y), prof = [10, 16, 20, 26, 34, 40, 44, 42, 38, 32, 22, 14], i;
+  for(i = 0; i < 12; i++){ Q(-24+i*4, -prof[i], 4, prof[i], i%3 === 1 ? "#8591a6" : "#7a8699"); Q(-24+i*4, -prof[i], 4, 2, "#a8b4c6"); }
+  for(i = 0; i < 8; i++) Q(-20+i*5, -40+i*2, 1, 24, "#66717f");
+  for(i = 0; i < 16; i++){ Q(-18+i*2, -2-i*2, 3, 1, "#a8783c"); Q(-18+i*2, -5-i*2, 1, 3, "#6a4a22"); } };
+LMK.heund = function(c, x, y, t){ var Q = qf(c, x, y), sh = Math.round(Math.sin(t*2.2));
+  Q(-15, -10, 30, 10, "#8d98ab"); Q(-15, -10, 30, 2, "#a8b4c6"); Q(10, -8, 5, 8, "#6f7a8c");
+  Q(-4+sh, -24, 8, 2, "#b3bfd0"); Q(-6+sh, -22, 12, 8, "#a8b4c6"); Q(-4+sh, -14, 8, 2, "#8d98ab"); Q(-6+sh, -22, 3, 8, "#c4cfdf"); Q(3+sh, -20, 3, 6, "#8d98ab"); };
+LMK.turtle = function(c, x, y, t){ var Q = qf(c, x, y), hb = Math.round(Math.sin(t*2)), i;
+  Q(-10, -10, 18, 10, "#6f8a6a"); Q(-8, -12, 14, 2, "#6f8a6a"); Q(-6, -14, 10, 2, "#7f9a78"); Q(-9, -9, 16, 1, "#8aa37e");
+  for(i = 0; i < 3; i++) Q(-7+i*5, -11, 1, 10, "#586e54"); Q(-9, -5, 16, 1, "#586e54");
+  Q(8, -9+hb, 6, 5, "#7f9a78"); Q(12, -8+hb, 1, 1, "#222"); Q(-9, -2, 4, 2, "#586e54"); Q(2, -2, 4, 2, "#586e54"); Q(-12, -4, 3, 2, "#586e54"); };
+LMK.yew = function(c, x, y){ var Q = qf(c, x, y);
+  Q(-4, -16, 8, 16, "#5a3d22"); Q(-4, -16, 2, 16, "#7a5632"); Q(-9, -12, 6, 3, "#5a3d22"); Q(3, -18, 7, 3, "#5a3d22");
+  Q(-14, -26, 28, 10, "#2f5f48"); Q(-10, -32, 20, 7, "#3c7455"); Q(-14, -26, 28, 2, "#fff"); Q(-10, -32, 20, 2, "#fff"); Q(12, -5, 10, 5, "#e8588a"); Q(14, -7, 6, 3, "#f283aa"); };
+LMK.altar = function(c, x, y, t){ var Q = qf(c, x, y);
+  Q(-16, -4, 32, 4, "#8a8d92"); Q(-12, -8, 24, 4, "#9a9da2"); Q(-8, -12, 16, 4, "#aaadb2"); Q(-5, -16, 10, 4, "#bcbfc4");
+  Q(-14, -24, 3, 20, "#7a7d82"); Q(11, -24, 3, 20, "#7a7d82"); Q(-14, -24, 3, 2, "#9a9da2"); Q(11, -24, 3, 2, "#9a9da2");
+  var f = Math.floor(t*6)%3; Q(-1, -22-f%2, 2, 3+f%2, "#ffb347"); Q(0, -22, 1, 2, "#ffe14d"); Q(-4, -17, 8, 1, "#6a4a22"); };
+LMK.snowman = function(c, x, y){ var Q = qf(c, x, y);
+  Q(-9, -10, 18, 10, "#fff"); Q(-9, -3, 18, 3, "#cfe6ff"); Q(-6, -19, 12, 9, "#fff"); Q(-6, -12, 12, 2, "#cfe6ff"); Q(-4, -26, 8, 7, "#fff");
+  Q(-2, -24, 1, 1, "#222"); Q(1, -24, 1, 1, "#222"); Q(0, -22, 2, 1, "#ff7a2a"); Q(-6, -20, 12, 2, "#d9503f"); Q(5, -20, 2, 5, "#d9503f"); Q(-4, -29, 8, 2, "#333"); Q(-3, -33, 6, 4, "#333");
+  Q(14, -18, 1, 18, "#6a4a22"); Q(15, -18, 8, 5, "#2f6fb0"); Q(16, -17, 6, 1, "#fff"); };
+LMK.lift = function(c, x, y, t){ var Q = qf(c, x, y), i, k;
+  Q(-1, -32, 3, 32, "#555a62"); Q(-6, -32, 13, 2, "#555a62"); for(i = -40; i <= 40; i += 2) Q(i, -31+Math.round(i*.2), 2, 1, "#333");
+  for(k = 0; k < 3; k++){ var p = (t*.1+k/3)%1, gx = Math.round(-40+p*80), gy = -31+Math.round(gx*.2); Q(gx, gy+1, 1, 5, "#333"); Q(gx-3, gy+6, 7, 2, "#ef4a3d"); Q(gx-3, gy+3, 1, 3, "#ef4a3d"); }
+  Q(-30, -2, 60, 2, "#fff"); };
+LMK.obs = function(c, x, y, t, st){ var Q = qf(c, x, y), open = st && st.open, i;
+  Q(-12, -9, 24, 9, "#e8e8e8"); Q(-12, -9, 24, 2, "#fff"); Q(8, -9, 4, 9, "#c9c9c9"); Q(-8, -6, 5, 4, "#7fb6f4");
+  for(i = 0; i < 12; i++){ var hw = Math.round(Math.sqrt(1-Math.pow((12-i)/12, 2))*11); Q(-hw, -21+i, hw*2, 1, i < 3 ? "#fff" : "#ececec"); }
+  Q(-1, -21, 3, 12, open ? "#0e1a3a" : "#cfd3da");
+  if(open) for(i = 0; i < 12; i++) Q(2+i*2, -22-i*3, 2, 2, "rgba(255,255,255," + (0.55-i*0.04).toFixed(2) + ")"); };
+LMK.clouds = function(c, x, y, t){ var Q = qf(c, x, y), i;
+  for(i = 0; i < 9; i++){ var cx2 = -48+i*12+Math.round(Math.sin(t*.5+i)*2); Q(cx2, -14+(i%3)*2, 15, 6, "#fff"); Q(cx2+2, -19+(i%3)*2, 10, 5, "#fff"); Q(cx2, -9+(i%3)*2, 15, 2, "#dfeaf5"); } };
+LMK.lake = function(c, x, y, t, st){ var Q = qf(c, x, y), w = (st && st.lw) || 30, i;
+  for(i = 0; i < 7; i++){ var sx2 = -w/2+3+((i*7+Math.floor(t*5))%(w-6)); Q(sx2, 1+(i%2)*2, 3, 1, "#fff"); } Q(-w/2, 0, w, 1, "#aee4ff");
+  for(i = 0; i < 3; i++){ var a = (t*.4+i/3)%1; Q(-8+i*8, -Math.round(a*22), 5-Math.round(a*3), 3, "rgba(255,255,255," + (.55*(1-a)).toFixed(2) + ")"); } };
+LMK.campus = function(c, x, y){ var Q = qf(c, x, y), i, j;
+  Q(-22, -16, 15, 16, "#d9d4c4"); Q(-8, -26, 13, 26, "#c9c3b2"); Q(6, -14, 12, 14, "#d9d4c4"); Q(-22, -16, 15, 2, "#e9e5d8"); Q(-8, -26, 13, 2, "#e0dbcc");
+  for(i = 0; i < 4; i++) for(j = 0; j < 3; j++) Q(-20+j*4, -13+i*3, 2, 2, "#7fb6f4"); for(i = 0; i < 7; i++) for(j = 0; j < 2; j++) Q(-6+j*5, -23+i*3, 3, 2, (i+j)%3 ? "#7fb6f4" : "#ffe9a0");
+  Q(8, -12, 3, 3, "#7fb6f4"); Q(13, -12, 3, 3, "#7fb6f4"); Q(-2, -30, 1, 4, "#888"); };
+LMK.govt = function(c, x, y){ var Q = qf(c, x, y), i; Q(-24, -13, 48, 13, "#cfc9b8"); Q(-24, -13, 48, 2, "#e2dccb"); for(i = 0; i < 11; i++){ Q(-22+i*4, -10, 2, 3, "#7fb6f4"); Q(-22+i*4, -5, 2, 3, "#7fb6f4"); } };
+LMK.creek = function(c, x, y, t){ var Q = qf(c, x, y), i; Q(-24, -1, 48, 3, "#3d7fd6"); for(i = 0; i < 6; i++) Q(-22+((i*8+Math.floor(t*8))%44), -1+(i%2)*2, 3, 1, "#9ad0ff");
+  Q(-8, -8, 16, 2, "#a8783c"); Q(-8, -8, 2, 8, "#6a4a22"); Q(6, -8, 2, 8, "#6a4a22"); Q(-8, -9, 16, 1, "#c08c4c"); };
+LMK.pheasant = function(c, x, y, t){ var Q = qf(c, x, y);
+  Q(-1, -22, 2, 22, "#6a4a22"); Q(-12, -32, 24, 12, "#d9c58f"); Q(-12, -32, 24, 2, "#f0e0b0"); Q(-6, -28, 12, 6, "#a0522d"); Q(2, -30, 3, 3, "#2e6f5a");
+  var px = Math.round(Math.sin(t*.5)*16)+26; pheasantSprite(c, x+px, y, Math.cos(t*.5) >= 0 ? 1 : -1, Math.floor(t*5)%2); };
+LMK.ridge = LMK.peak;
+
+/* ==== art3.js ==== */
+
+// ---------- pixel art 3: obstacles, ambience, summit scenes, badges ----------
+var OBS = {
+ rock:function(c, sx, sy, ts, h){ R(c, sx+1, sy-h, ts-2, h, "#7b7f86"); R(c, sx+1, sy-h, ts-2, 2, "#a3a8b0"); R(c, sx+2, sy-3, 2, 2, "#5a5e65"); },
+ log:function(c, sx, sy, ts, h){ R(c, sx, sy-h, ts, h, "#8a5a2b"); R(c, sx, sy-h, ts, 2, "#a8783c"); R(c, sx+ts-3, sy-h+1, 2, h-2, "#d4aa72"); R(c, sx+1, sy-3, ts-5, 1, "#6a4420"); },
+ lava:function(c, sx, sy, ts, h){ R(c, sx+1, sy-h, ts-2, h, "#2a2424"); R(c, sx+1, sy-h, ts-2, 2, "#4b4343"); R(c, sx+2, sy-h+3, 2, 3, "#ff7a2a"); R(c, sx+ts-4, sy-4, 2, 2, "#ffb347"); R(c, sx+3, sy-2, Math.max(2, ts-6), 1, "#e8641e"); },
+ snow:function(c, sx, sy, ts, h){ R(c, sx+1, sy-h+2, ts-2, h-2, "#f4f8fc"); R(c, sx+2, sy-h, ts-4, 3, "#fff"); R(c, sx+1, sy-3, ts-2, 3, "#cfe0f0"); },
+ boulder:function(c, sx, sy, ts, h){ R(c, sx+2, sy-h, ts-4, 2, "#9aa0a8"); R(c, sx+1, sy-h+2, ts-2, h-3, "#8a9098"); R(c, sx+2, sy-3, ts-4, 3, "#6d7279"); R(c, sx+2, sy-h+2, 2, 3, "#c0c6ce"); },
+ mud:function(c, sx, sy, ts, h){ var hh = Math.max(3, Math.round(h*.55)); R(c, sx, sy-hh, ts, hh, "#6a4a2c"); R(c, sx, sy-hh, ts, 1, "#8a6a44"); R(c, sx+2, sy-hh+1, 3, 1, "#a98a62"); R(c, sx+ts-5, sy-2, 3, 1, "#4a3220"); },
+ roots:function(c, sx, sy, ts, h){ R(c, sx, sy-3, ts, 3, "#7a5a36"); R(c, sx+1, sy-h, 3, h, "#6b4a2b"); R(c, sx+ts-4, sy-h+2, 3, h-2, "#7a5a36"); R(c, sx+1, sy-h, ts-2, 2, "#8a6a44"); },
+ leaves:function(c, sx, sy, ts, h){ R(c, sx, sy-h+2, ts, h-2, "#c0392b"); R(c, sx+2, sy-h, ts-4, 3, "#e0612a"); R(c, sx+1, sy-h+3, 3, 2, "#f2a53a"); R(c, sx+ts-5, sy-4, 3, 2, "#f2a53a"); },
+ pillar:function(c, sx, sy, ts, h){ R(c, sx+1, sy-h, ts-2, h, "#8a8780"); R(c, sx+1, sy-h, ts-2, 2, "#b8b5ac"); R(c, sx+1, sy-h, 2, h, "#a8a59c"); R(c, sx+ts-3, sy-h+2, 1, h-2, "#6c6a64"); }
+};
+
+// ---------- ambience: drawn from the clock, so there is nothing to update ----------
+function ambDraw(c, V, kind, t, L){
+  var w = V.w, h = V.h, i, p, x, y;
+  if(kind === "birds"){ for(i = 0; i < 3; i++){ x = ((t*(10+i*3)+i*w/3) % (w+40)) - 20; y = 22+i*Math.round(h*.06)+Math.sin(t*1.3+i)*3; var f = Math.floor(t*6+i)%2; R(c, x-3, y+f, 3, 1, "#2a2a2a"); R(c, x, y+1-f, 3, 1, "#2a2a2a"); R(c, x, y+1, 1, 1, "#2a2a2a"); } }
+  else if(kind === "leaves" || kind === "snow" || kind === "gleaf"){
+    var n = kind === "snow" ? 46 : 30, cols = kind === "snow" ? ["#ffffff"] : L.trees;
+    for(i = 0; i < n; i++){ p = V.parts[i % V.parts.length]; x = ((p.x*w + Math.sin(t*.9+p.a)*7 + t*(kind === "snow" ? 3 : 9)) % w + w) % w; y = ((p.y*h + t*(kind === "snow" ? 14+p.s*.5 : 11+p.s*.6)) % h);
+      c.globalAlpha = .85; R(c, x, y, 2, kind === "snow" ? 2 : 2, cols[i % cols.length]); c.globalAlpha = 1; } }
+  else if(kind === "fog" || kind === "mist"){ c.globalAlpha = kind === "fog" ? .4 : .26; for(i = 0; i < 4; i++) R(c, ((t*8+i*w/3) % (w+100)) - 90, h*.3+i*h*.12, 90, 9, "#fff"); c.globalAlpha = 1; }
+  else if(kind === "wind"){ c.globalAlpha = .55; for(i = 0; i < 6; i++) R(c, ((t*70+i*57) % (w+60)) - 30, h*.1+i*h*.08, 22, 1, "#fff"); c.globalAlpha = 1; }
+}
+function ov(c, V, col, a, y0, hh){ c.globalAlpha = Math.max(0, Math.min(1, a)); R(c, 0, y0 || 0, V.w, hh || V.h, col); c.globalAlpha = 1; }
+function cityLights(c, V, t, a){
+  c.globalAlpha = a; for(var k = 0; k < 90; k++){ var x = (k*37) % V.w, y = V.y0 - 6 - ((k*53) % 46); if((k*7 + Math.floor(t*3)) % 5) R(c, x, y, 2, 2, "#ffe9a0"); } c.globalAlpha = 1;
+}
+// ----- the summit scene: each mountain finishes differently (t = seconds since the flag went up) -----
+function sumFx(c, M, V, t){
+  var fx = M.L.fx, w = V.w, h = V.h, p = Math.min(1, t/3), i, x, y, tx = M.topX || w/2, ty = M.topY || h/2, hz = V.y0 - 26;
+  function leaves(n, cols, speed){ for(i = 0; i < n; i++){ var q = V.parts[i % V.parts.length]; x = ((q.x*w + Math.sin(t*1.4+q.a*3)*14 + t*8) % w + w) % w; y = (q.y*h*1.4 + t*speed*(.6+q.s/60)) % (h+10) - 6; R(c, x, y, 3, 2, cols[i % cols.length]); } }
+  if(fx === "lights"){ ov(c, V, "#0a1030", .38*p); cityLights(c, V, t, p); }
+  else if(fx === "dusk"){ ov(c, V, "#2a1650", .36*p); cityLights(c, V, t, p); c.globalAlpha = p*.9; for(i = 0; i < 24; i++){ x = (i*61) % w; y = (i*29) % Math.round(h*.4); if((i+Math.floor(t*2)) % 4) R(c, x, y, 1, 1, "#fff"); } c.globalAlpha = 1; }
+  else if(fx === "rainbow"){ ov(c, V, "#fff6d8", .06*p); var rc = ["#ff5a5a", "#ff9a3a", "#ffe14d", "#6ed05a", "#4aa8ff", "#a06aff"], cx = w*.62, cy = V.y0 - 4, a;
+    c.globalAlpha = .8*p; for(var b = 0; b < 6; b++) for(a = 0; a <= 1; a += .012){ var an = Math.PI*(1-a), rr = w*.3 + b*3; R(c, cx + Math.cos(an)*rr, cy - Math.sin(an)*rr*.9, 3, 3, rc[b]); } c.globalAlpha = 1; }
+  else if(fx === "sunset"){ ov(c, V, "#ff7a3a", .2*p); ov(c, V, "#ffcf6a", .14*p, h*.4, h*.35); R(c, w*.16, hz - 34 + (1-p)*16, 26, 26, "#ff5a2a"); R(c, w*.16+3, hz - 31 + (1-p)*16, 20, 20, "#ff8a3a"); }
+  else if(fx === "rays"){ c.globalAlpha = .14*p; for(i = 0; i < 7; i++) for(y = 0; y < h; y += 3){ x = w*.82 + (y-h*.12)*(-.5 - i*.32) + 0; R(c, x, y, 6, 3, "#fff6c0"); } c.globalAlpha = 1; ov(c, V, "#fff0b0", .06*p); }
+  else if(fx === "maple" || fx === "embers" || fx === "gold" || fx === "leaves"){
+    var cols = fx === "gold" ? ["#f0c64a", "#e0a82a", "#ffe08a"] : fx === "leaves" ? ["#4a9a55", "#79b85a", "#a8d070"] : ["#d9381e", "#f0742a", "#f2b53a", "#c0392b"];
+    ov(c, V, fx === "gold" ? "#ffcf4a" : "#ff6a2a", (fx === "embers" ? .16 : .08)*p); leaves(46, cols, fx === "embers" ? -26 : 34); }
+  else if(fx === "sunrise"){ ov(c, V, "#ff9a6a", .22*(1-p*.5)); var sx = w*.78, sy = hz + 14 - p*54; c.save(); c.beginPath(); c.rect(0, 0, w, hz+4); c.clip(); R(c, sx-14, sy-14, 28, 28, "#ffd36a"); R(c, sx-10, sy-10, 20, 20, "#fff1a0"); R(c, sx-20, sy-4, 40, 8, "rgba(255,200,120,.3)"); c.restore();
+    c.globalAlpha = .7*p; for(i = 0; i < 18; i++) R(c, sx-18 + (i*7)%36, hz + 3 + (i*5)%22 + Math.sin(t*3+i), 3, 1, "#fff2b0"); c.globalAlpha = 1; }
+  else if(fx === "aura"){ ov(c, V, "#2a1a5a", .18*p); for(i = 0; i < 4; i++){ var rr = (t*16 + i*18) % 72; c.globalAlpha = (1 - rr/72)*.8*p; for(var q2 = 0; q2 < 28; q2++){ var an2 = q2/28*6.283; R(c, tx + Math.cos(an2)*rr, ty - 14 + Math.sin(an2)*rr*.8, 2, 2, i % 2 ? "#6ee0ff" : "#c9a8ff"); } } c.globalAlpha = 1; }
+  else if(fx === "lanterns"){ ov(c, V, "#241a3a", .26*p); for(i = 0; i < 16; i++){ x = tx - 70 + (i*47) % 140 + Math.sin(t*1.2+i)*4; y = h - ((t*14 + i*29) % (h+20)); c.globalAlpha = .25; R(c, x-3, y-3, 10, 11, "#ffb347"); c.globalAlpha = 1; R(c, x, y, 4, 5, "#ff9a3a"); R(c, x+1, y+1, 2, 3, "#ffe9a0"); } }
+  else if(fx === "birds"){ ov(c, V, "#fff2c8", .1*p); for(i = 0; i < 12; i++){ var u = Math.max(0, t*34 - i*6); x = tx + u*(1.2 + (i%3)*.3); y = ty - 20 - u*(.45 + (i%4)*.1); if(u > 0){ var f = Math.floor(t*7+i)%2; R(c, x-3, y+f, 3, 1, "#2a2a2a"); R(c, x, y+1-f, 3, 1, "#2a2a2a"); } } }
+  else if(fx === "island"){ ov(c, V, "#ffb070", .2*p); var ix = w*.1, by = Math.round(h*.6); c.globalAlpha = p; for(i = 0; i < 10; i++){ var iw = 8+i*4; R(c, ix-iw/2, by-10+i, iw, 1, i < 2 ? "#8a98c8" : "#6a7aa8"); } R(c, ix-50, by, 100, 4, "#4a6aa8"); R(c, ix-34, by+4, 68, 2, "#3a5a98"); c.globalAlpha = 1; }
+  else if(fx === "pheasants"){ ov(c, V, "#fff2c8", .08*p); for(i = 0; i < 6; i++){ x = ((t*26 + i*w/5) % (w+60)) - 30; pheasantSprite(c, x, V.y0 - 14 - (i%3)*8, 1, Math.floor(t*6+i)%2); } leaves(14, ["#4a9a55", "#a0522d"], 30); }
+  else if(fx === "sparkle"){ ov(c, V, "#ffe9a0", .12*p); for(i = 0; i < 60; i++){ var q3 = V.parts[i % V.parts.length]; x = (q3.x*w + i*17) % w; y = (q3.y*h + i*29) % h; if((Math.floor(t*3 + i)) % 3) R(c, x, y, 2, 2, i % 2 ? "#ffd36a" : "#fff6c0"); } }
+  else if(fx === "stars"){ ov(c, V, "#06102a", .62*p); c.globalAlpha = p; for(i = 0; i < 70; i++){ x = (i*53) % w; y = (i*31) % Math.round(h*.7); if((i + Math.floor(t*2)) % 5) R(c, x, y, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1, "#fff"); }
+    var sp = (t*.6) % 1.2; if(sp < .5){ for(i = 0; i < 8; i++) R(c, w*.2 + sp*160 - i*3, 20 + sp*80 - i*1.5, 2, 1, "rgba(255,255,255," + (1-i/8).toFixed(2) + ")"); } c.globalAlpha = 1; }
+  else if(fx === "snow"){ ov(c, V, "#cfe6ff", .1*p); for(i = 0; i < 70; i++){ var q4 = V.parts[i % V.parts.length]; x = ((q4.x*w*1.3 + i*13 + Math.sin(t+q4.a)*5) % w + w) % w; y = (q4.y*h + t*(18+q4.s*.5) + i*7) % h; R(c, x, y, 2, 2, "#fff"); }
+    for(i = 0; i < 8; i++) if(Math.floor(t*4+i)%3 === 0) R(c, tx-16 + (i*5)%32, ty-34 + (i*7)%26, 1, 1, "#fff"); }
+  else if(fx === "alpen"){ ov(c, V, "#ff9ab8", .24*p, 0, h*.62); ov(c, V, "#ffd0a0", .12*p, h*.4, h*.3); for(i = 0; i < 40; i++){ var q5 = V.parts[i % V.parts.length]; x = (q5.x*w + i*19) % w; y = (q5.y*h*.9 + t*10) % h; R(c, x, y, 2, 2, "#fff"); }
+    for(i = 0; i < 10; i++) if(Math.floor(t*5+i)%3 === 0) R(c, (i*43) % w, V.y0 - 20 - (i*17) % 60, 1, 1, "#fff"); }
+  else if(fx === "clouds"){ var by = h + 12 - p*(h - (V.y0 - 56)); for(i = 0; i < 26; i++){ x = i*Math.ceil(w/22) - 10 + Math.sin(t*.4+i)*3; var cy2 = by + (i%3)*5; R(c, x, cy2, 22, 9, "#fff"); R(c, x+4, cy2-5, 14, 6, "#fff"); R(c, x, cy2+7, 22, h, "#eef5fb"); }
+    ov(c, V, "#ffd9a0", .16*p); R(c, w*.76, 16, 18, 18, "#ffe08a"); }
+  else if(fx === "lake"){ ov(c, V, "#7ad8ff", .08*p); }
+}
+
+// ---------- badge emblems (one small picture per mountain) ----------
+var EMB = {
+ tower:function(c, x, y){ R(c, x-1, y-9, 2, 6, "#e8eaee"); R(c, x-3, y-6, 6, 2, "#cfd3da"); R(c, x-1, y-12, 1, 3, "#8a8f98"); R(c, x-3, y-3, 6, 3, "#cfd3da"); },
+ falls:function(c, x, y){ R(c, x-5, y-8, 10, 8, "#6d788c"); R(c, x-1, y-8, 3, 8, "#bfe0ff"); R(c, x-4, y-1, 8, 2, "#3d7fd6"); },
+ campus:function(c, x, y){ R(c, x-5, y-6, 4, 6, "#d9d4c4"); R(c, x-1, y-9, 5, 9, "#c9c3b2"); R(c, x, y-7, 1, 1, "#7fb6f4"); R(c, x+2, y-4, 1, 1, "#7fb6f4"); R(c, x-4, y-4, 1, 1, "#7fb6f4"); },
+ needle:function(c, x, y){ R(c, x-4, y-5, 2, 5, "#a3a3a0"); R(c, x-1, y-10, 3, 10, "#bcbcb8"); R(c, x+3, y-6, 2, 6, "#a3a3a0"); R(c, x, y-10, 1, 10, "#8d8d88"); },
+ maple:function(c, x, y){ R(c, x-1, y-2, 2, 4, "#6b4a2b"); R(c, x-4, y-6, 8, 4, "#d9381e"); R(c, x-2, y-9, 4, 3, "#f0742a"); R(c, x-5, y-4, 2, 2, "#f2b53a"); R(c, x+3, y-4, 2, 2, "#f2b53a"); },
+ wave:function(c, x, y){ R(c, x-6, y-5, 12, 2, "#4a8de3"); R(c, x-5, y-8, 3, 3, "#4a8de3"); R(c, x+1, y-8, 3, 3, "#4a8de3"); R(c, x-6, y-2, 12, 2, "#3873c4"); R(c, x+3, y-10, 3, 3, "#ffd36a"); },
+ peaks:function(c, x, y){ R(c, x-6, y-5, 3, 5, "#b0b0aa"); R(c, x-2, y-9, 4, 9, "#d0d0ca"); R(c, x+3, y-6, 3, 6, "#b0b0aa"); },
+ dragon:function(c, x, y){ R(c, x-6, y-3, 8, 3, "#5fb04f"); R(c, x-2, y-6, 8, 3, "#7fcf6a"); R(c, x+2, y-9, 4, 3, "#5fb04f"); R(c, x+5, y-10, 2, 2, "#ef4a3d"); R(c, x+3, y-8, 1, 1, "#222"); },
+ turtle:function(c, x, y){ R(c, x-5, y-6, 9, 5, "#6f8a6a"); R(c, x-3, y-8, 6, 2, "#7f9a78"); R(c, x+4, y-5, 3, 3, "#7f9a78"); R(c, x-5, y-1, 2, 1, "#586e54"); R(c, x+1, y-1, 2, 1, "#586e54"); },
+ cliff:function(c, x, y){ R(c, x-6, y-6, 5, 6, "#a8a8a2"); R(c, x-1, y-10, 4, 10, "#c0c0ba"); R(c, x+3, y-4, 3, 4, "#a8a8a2"); R(c, x-6, y-6, 5, 1, "#d0d0ca"); },
+ pillars:function(c, x, y){ [[-6, 5], [-3, 8], [0, 10], [3, 7]].forEach(function(a){ R(c, x+a[0], y-a[1], 2, a[1], "#9b988f"); R(c, x+a[0], y-a[1], 2, 1, "#c0bdb4"); }); },
+ pheasant:function(c, x, y){ R(c, x-5, y-4, 7, 4, "#a0522d"); R(c, x+2, y-7, 2, 4, "#2e6f5a"); R(c, x+2, y-9, 3, 3, "#2e6f5a"); R(c, x-9, y-4, 5, 1, "#c68a4a"); R(c, x+4, y-8, 1, 1, "#d9503f"); },
+ scroll:function(c, x, y){ R(c, x-5, y-8, 10, 7, "#e8d9a8"); R(c, x-6, y-9, 2, 9, "#a8783c"); R(c, x+4, y-9, 2, 9, "#a8783c"); R(c, x-3, y-6, 6, 1, "#8a6a3a"); R(c, x-3, y-4, 5, 1, "#8a6a3a"); },
+ telescope:function(c, x, y){ R(c, x-5, y-7, 9, 3, "#cfd3da"); R(c, x+3, y-8, 3, 5, "#8a8f98"); R(c, x-1, y-4, 2, 4, "#6a4a22"); R(c, x-3, y-1, 6, 1, "#6a4a22"); R(c, x-5, y-11, 1, 1, "#fff"); R(c, x+4, y-12, 1, 1, "#fff"); },
+ fivepeaks:function(c, x, y){ [[-6, 4], [-3, 6], [0, 8], [3, 6], [6, 4]].forEach(function(a){ R(c, x+a[0]-1, y-a[1], 3, a[1], "#d8b070"); R(c, x+a[0]-1, y-a[1], 3, 1, "#f0d090"); }); },
+ altar:function(c, x, y){ R(c, x-6, y-2, 12, 2, "#8a8d92"); R(c, x-4, y-4, 8, 2, "#9a9da2"); R(c, x-2, y-6, 4, 2, "#aaadb2"); R(c, x-1, y-9, 2, 3, "#ffb347"); },
+ ski:function(c, x, y){ R(c, x-5, y-6, 1, 6, "#4a8de3"); R(c, x-2, y-6, 1, 6, "#ef4a3d"); R(c, x-6, y-7, 12, 1, "#333"); R(c, x+2, y-9, 3, 3, "#fff"); R(c, x+3, y-3, 2, 3, "#333"); },
+ spire:function(c, x, y){ for(var i = 0; i < 11; i++) R(c, x - Math.round(i*.35) - 1, y - 11 + i, 2 + Math.round(i*.7), 1, i < 2 ? "#e6edf5" : "#9aa6b8"); },
+ cloud:function(c, x, y){ R(c, x-6, y-4, 12, 4, "#fff"); R(c, x-4, y-7, 7, 3, "#fff"); R(c, x+1, y-6, 4, 2, "#fff"); R(c, x-6, y-1, 12, 1, "#cfe0ee"); },
+ crater:function(c, x, y){ R(c, x-6, y-3, 12, 3, "#5a4d4a"); R(c, x-4, y-6, 8, 3, "#6a5d58"); R(c, x-2, y-6, 4, 1, "#7ad8ff"); R(c, x-1, y-8, 1, 2, "#e8e8e8"); R(c, x+1, y-9, 1, 2, "#e8e8e8"); }
+};
+function badgeCv(m, got, S){
+  S = S || 48; var cv = document.createElement("canvas"); cv.width = cv.height = S; var c = cv.getContext("2d"); c.imageSmoothingEnabled = false;
+  var k = S/48, L = m.L, edge = ["#4fa05b", "#e0a02a", "#d9503f"][m.lv], i, x, y;
+  c.save(); c.scale(k, k);
+  // round (octagon) shield
+  function disc(r, col){ for(var yy = -r; yy <= r; yy++){ var hw = Math.round(Math.sqrt(r*r - yy*yy)); R(c, 24-hw, 24+yy, hw*2, 1, col); } }
+  if(!got){ disc(22, "#8a8a8a"); disc(20, "#bdbdb7"); disc(18, "#d6d6d0");
+    for(y = 12; y < 38; y++){ var hw2 = Math.round(Math.max(0, 14 - Math.abs(y-30)*.8)); R(c, 24-hw2, y, hw2*2, 1, "#c4c4be"); } txt(c, "?", 21, 18, 1, "#9a9a94"); c.restore(); return cv; }
+  disc(23, "#1d1d1d"); disc(22, edge); disc(19, "#1d1d1d");
+  // inner picture: sky bands + hills + ground
+  c.save(); c.beginPath(); c.arc(24, 24, 18, 0, 6.2832); c.clip();
+  L.sky.forEach(function(col, j){ R(c, 0, 6+j*8, 48, 9, col); });
+  c.fillStyle = L.far; for(x = 6; x < 42; x += 3){ var hh = 8 + Math.abs(Math.sin(x/5 + m.seed))*10; c.fillRect(x, 36 - hh, 3, hh + 10); }
+  c.fillStyle = L.stone; for(x = 6; x < 42; x += 3){ var h2 = 4 + Math.max(0, 16 - Math.abs(x-24)*1.3); c.fillRect(x, 40 - h2, 3, h2 + 10); }
+  c.fillStyle = L.top; for(x = 6; x < 42; x += 3){ var h3 = 4 + Math.max(0, 16 - Math.abs(x-24)*1.3); c.fillRect(x, 40 - h3, 3, 2); }
+  R(c, 0, 40, 48, 10, L.top); R(c, 0, 40, 48, 1, shade(L.top, -30));
+  c.restore();
+  (EMB[L.emb] || EMB.peaks)(c, 24, 38);
+  // star + height ribbon
+  R(c, 21, 2, 6, 2, "#ffd23f"); R(c, 22, 1, 4, 1, "#ffd23f"); R(c, 22, 4, 4, 1, "#c8962a");
+  var s = String(Math.round(m.h)); R(c, 24 - Math.ceil(txtW(s, 1)/2) - 3, 37, txtW(s, 1) + 6, 9, "#1d1d1d"); txt(c, s, 24 - Math.ceil(txtW(s, 1)/2), 38, 1, "#ffe9a0");
+  c.restore(); return cv;
+}
+
+/* ==== person.js ==== */
+// ---------- the hiker (woman / man), pixel sprite ----------
+var DEF = {who:"woman", hair:"long", hairC:"#4a2f23", hat:"none", hatC:"#e0453a", skin:"#f8d2b0", jk:"#e86a5a", pants:"#3f5e8a", pack:"#4a9a63"};
+var OPT = [["who","Hiker",["woman","man"]],["hair","Hair",["short","long","ponytail","bun"]],["hat","Hat",["none","beanie","cap","bucket","straw","headband"]]];
+var COL = [["skin","Skin"],["hairC","Hair color"],["hatC","Hat color"],["jk","Jacket"],["pants","Pants / skirt"],["pack","Backpack"]];
+save.h = Object.assign({}, DEF, save.h || {});
+OPT.forEach(function(a){ if(a[2].indexOf(save.h[a[0]]) < 0) save.h[a[0]] = DEF[a[0]]; });
+function person(c, x, y, dir, o, h){
+  o = o || {}; h = h || save.h;
+  var fr = o.fr ? 1 : 0, sit = o.sit, woman = h.who === "woman", K = "#2a1f1a", sh = "#5b3b2a", hc = h.hairC;
+  c.save(); c.translate(Math.round(x), Math.round(y)); c.scale(dir >= 0 ? 1 : -1, 1);
+  var Q = function(a, b, w, hh, col){ c.fillStyle = col; c.fillRect(a, b, w, hh); };
+  var by = (o.walk && fr) ? -1 : 0, sy = sit ? 3 : 0;
+  Q(-5, -1, 10, 1, "rgba(0,0,0,.22)");
+  if(sit){ Q(-4, -3, 9, 3, h.pants); Q(5, -3, 3, 3, sh); }
+  else { var bl = fr ? 6 : 5, fl = fr ? 5 : 6; Q(-3, -6, 3, bl, shade(h.pants, -25)); Q(-3, -6+bl-1, 4, 2, sh); Q(0, -6, 3, fl, h.pants); Q(0, -6+fl-1, 4, 2, sh); }
+  c.translate(0, sy);
+  Q(-8, -14+by, 4, 8, h.pack); Q(-7, -11+by, 2, 3, shade(h.pack, -30));                  // backpack
+  if(h.hair === "long") Q(-6, -22+by, 3, 13, hc);
+  if(h.hair === "ponytail") Q(-8, -22+by, 2, 9, hc);
+  Q(-5, -13+by, 2, 6, shade(h.jk, -30));                                                 // back arm
+  Q(-4, -14+by, 8, 8, h.jk); Q(0, -14+by, 1, 8, shade(h.jk, -30));                       // torso
+  if(woman) Q(-5, -8+by, 10, 3, shade(h.pants, 20));                                     // skirt
+  if(o.up){ Q(3, -24, 2, 10, h.jk); Q(3, -26, 2, 2, h.skin); Q(-5, -24, 2, 10, h.jk); Q(-5, -26, 2, 2, h.skin); }
+  else { Q(3, -13+by, 2, 6, h.jk); Q(3, -7+by, 2, 2, h.skin); }
+  Q(-5, -24+by, 10, 10, h.skin);                                                         // head (a cube)
+  Q(-1, -20+by, 2, 3, K); Q(2, -20+by, 2, 3, K); Q(2, -20+by, 1, 1, "#fff"); Q(-1, -20+by, 1, 1, "#fff");
+  Q(-3, -17+by, 2, 1, "#ff9aa2"); Q(3, -17+by, 2, 1, "#ff9aa2"); Q(1, -16+by, 2, 1, "#b5483e");
+  if(woman) Q(3, -21+by, 2, 1, K);
+  if(h.hair !== "none"){ Q(-5, -26+by, 10, 3, hc); Q(-6, -25+by, 1, 6, hc); Q(-5, -24+by, 3, 2, hc); Q(2, -24+by, 3, 1, hc); }
+  if(h.hair === "bun" && h.hat === "none") Q(-3, -29+by, 5, 3, hc);
+  if(h.hat === "beanie"){ Q(-5, -28+by, 10, 4, h.hatC); Q(-6, -25+by, 12, 1, shade(h.hatC, -25)); Q(-1, -30+by, 3, 2, "#fff"); }
+  if(h.hat === "cap"){ Q(-5, -28+by, 10, 3, h.hatC); Q(3, -25+by, 6, 1, shade(h.hatC, -20)); }
+  if(h.hat === "bucket"){ Q(-4, -29+by, 8, 4, h.hatC); Q(-8, -25+by, 16, 1, shade(h.hatC, -20)); }
+  if(h.hat === "straw"){ Q(-4, -29+by, 8, 3, "#e8c46a"); Q(-9, -26+by, 18, 2, "#d9a94a"); Q(-4, -28+by, 8, 1, h.hatC); }
+  if(h.hat === "headband"){ Q(-5, -26+by, 10, 2, h.hatC); Q(-7, -25+by, 2, 4, h.hatC); }
+  if(o.thirsty || sit) Q(6, -23+by, 1, 2, "#6ccfff");
+  if(o.drink) Q(5, -14, 3, 7, "#6ccfff");
+  c.restore();
+}
+
+/* ==== scene.js ==== */
+
+// ---------- scene: build one mountain from its data, then draw it (hike, card pictures and badges share this) ----------
+var JL = 7;   // columns in the fork where the two routes differ
+var LW = {falls:30, cones:50, wall:54, fort:46, ulsan:50, campus:48, govt:50, clouds:104, temple:34, buddha:26, deer:24, gate:30, beacon:18, cable:84, tower:30, pav:46, village:56, well:24, gomodang:46, ruins:38, cols:46, sign:26, needle:40, dome:62, peak3:50, peak:20, spire:22, heund:34, turtle:30, yew:32, altar:34, snowman:34, lift:84, obs:26, lake:34, creek:50, pheasant:40, ridge:20};
+var LHt = {tower:60, spire:42, falls:36, ulsan:46, cable:36, lift:34, buddha:32, yew:34, snowman:34, needle:40, peak3:38, cols:38, dome:28, gate:26, pheasant:34, ruins:36, temple:26, fort:26, clouds:24, campus:30};
+
+function kindAt(M, c){
+  var f = c/M.N, k = "dirt"; M.L.path.forEach(function(p){ if(f >= p[0]) k = p[1]; });
+  return k;
+}
+function surfKind(M, c){
+  if(M.bridge[c]) return "plank";
+  if(c >= M.N) return M.hall[c]/M.maxH > .76 ? "alp" : "top";
+  var k = kindAt(M, c);
+  if((k === "dirt" || k === "grass" || k === "leaf") && M.hall[c]/M.maxH > .78) k = "alp";
+  return k;
+}
+function applyRoute(M, r){
+  var a = r === "steep" ? M.jx.steep : M.jx.easy, i;
+  for(i = 0; i < JL; i++){ M.sf[M.jx.J+i] = a[i]; M.hall[M.jx.J+i] = a[i]; }
+}
+function build(M){
+  if(M.sf) return;
+  var L = M.L, P = L.prof, r = rng(M.seed*77), N = M.NN, Hs = Math.round(N*P.hs), sf = [0], flat = 0, i, c, k;
+  var J = Math.round(N*.34), K = J+JL, E = P.end, PL = E === "long" ? 10 : E === "crater" ? 7 : 6, nled = 0, lastLed = -9;
+  M.N = N; M.rest = {}; M.bridge = {}; M.ledge = {}; M.jx = {J:J, K:K, easy:[], steep:[]}; M.route = null;
+  var bg = -1; if(L.bridge){ bg = Math.round(N*.46 + r()*N*.1); if(bg+4 > J-3 && bg < K+3) bg = K+4; if(bg+4 >= N-PL-2) bg = -1; }
+  for(c = 1; c < N; c++){
+    var prev = sf[c-1], v = prev;
+    if(c >= J && c < K){
+      if(c === J){ var h0 = prev, D = 4; for(i = 0; i < JL; i++){ M.jx.easy.push(h0+Math.round((i+1)*D/JL)); M.jx.steep.push(h0+Math.min(D, i+1)); } }
+      v = M.jx.easy[c-J];
+    }
+    else if(c >= N-PL) v = prev;
+    else if(bg >= 0 && c >= bg && c < bg+4) v = prev;
+    else if(flat > 0){ flat--; }
+    else {
+      var want = Hs*c/(N-PL) - prev, u = r(), pu = want > 1.5 ? .8 : want > 0 ? .45 : .12;
+      pu = Math.max(.05, Math.min(.92, pu + (P.up-.5) + (P.stairs ? .15 : 0)));
+      var nearFork = c >= J-3 && c <= K+3;
+      if(!nearFork && c > 7 && c < N-PL-2 && want > 1.2 && nled < Math.round(N/8) && c-lastLed > 5 && r() < P.ledge){ v = prev+2; M.ledge[c] = 1; nled++; lastLed = c; }
+      else if(u < pu) v = prev+1;
+      else if(u < pu+P.dn && prev > 1) v = prev-1;
+      if(!nearFork && !M.ledge[c] && c < N-PL-6 && r() < P.flat){ flat = 3+Math.floor(r()*4); M.rest[c] = 1; }
+    }
+    sf.push(v);
+  }
+  // the end of the trail: every mountain finishes differently
+  var b = sf[N-PL-1];
+  function put(from, arr){ for(i = 0; i < arr.length; i++) if(from+i < N) sf[from+i] = b+arr[i]; }
+  if(E === "dome") put(N-6, [0, 1, 2, 2, 2, 1]);
+  else if(E === "spire") put(N-6, [0, 0, 1, 1, 1, 1]);
+  else if(E === "steps") put(N-8, [1, 1, 2, 2, 3, 3, 3, 3]);
+  else if(E === "crater"){ put(N-7, [1, 1, 0, -1, -1, -1, -1]); }
+  else if(E === "long"){ for(c = N-PL; c < N; c++) sf[c] = b; put(N-3, [1, 1, 0]); }
+  else { for(c = N-PL; c < N; c++) sf[c] = b; for(c = N-4; c < N-1; c++) sf[c] = b+1; }
+  for(c = 1; c < N; c++) if(sf[c] < 0) sf[c] = 0;
+  if(bg >= 0) for(c = bg; c < bg+3; c++){ M.bridge[c] = 1; delete M.rest[c]; delete M.ledge[c]; }
+  // no climb is ever taller than two blocks, so every step can be jumped
+  for(c = 1; c < N; c++) if(sf[c] > sf[c-1]+2) sf[c] = sf[c-1]+2;
+  // any climb of two blocks or more is a jump-up ledge (so it always gets its arrow and its hint)
+  for(c = 1; c < N; c++) if(sf[c]-sf[c-1] >= 2) M.ledge[c] = 1;
+  // the far side of the summit
+  var hh = sf.slice(), tp = sf[N-1], rim = Math.max.apply(null, sf);
+  if(E === "crater"){ hh.push(rim, rim, rim-1); tp = rim-1; }
+  else if(E === "cliff"){ tp = Math.round(tp*.28); hh.push(tp); }
+  else if(E === "spire"){ hh.push(tp+1); }
+  while(tp > 0){ tp -= E === "spire" ? 3 : E === "dome" ? (hh.length%2 ? 1 : 2) : (r() < .8 ? 2 : 1); hh.push(Math.max(0, tp)); }
+  for(i = 0; i < 4; i++) hh.push(0);
+  M.sf = sf; M.hall = hh; M.NT = hh.length; M.maxH = Math.max.apply(null, sf); M.sumH = M.maxH;
+  // rails along the steep bits
+  M.railOn = {};
+  if(L.rail) for(c = 3; c < N-3; c++) if((sf[c+1]-sf[c] >= 1 && sf[c]/M.maxH > .22 && !M.bridge[c]) || M.ledge[c] || M.ledge[c+1]) M.railOn[c] = 1;
+  var taken = {}; for(c = J-1; c <= K+1; c++) taken[c] = 1;
+  for(c = 0; c < 4; c++) taken[c] = 1;
+  for(c = N-4; c < N+3; c++) taken[c] = 1;
+  Object.keys(M.rest).forEach(function(q){ q = +q; taken[q-1] = taken[q] = taken[q+1] = taken[q+2] = 1; });
+  Object.keys(M.bridge).forEach(function(q){ q = +q; taken[q-1] = taken[q] = taken[q+1] = 1; });
+  Object.keys(M.ledge).forEach(function(q){ if(M.ledge[q]){ q = +q; taken[q-1] = taken[q] = taken[q+1] = 1; } });
+  // the landmarks (real places, drawn big and standing on the trail)
+  M.lmk = [];
+  var nb = M.lm.filter(function(a){ return a[2] === "b"; }).length, bi = 0;
+  M.lm.forEach(function(a, ix){
+    var col, w = a[2];
+    if(w === "a") col = Math.max(8, Math.round(J*.6));
+    else if(w === "e" || w === "s") col = J+3;
+    else if(w === "b"){ bi++; var lo = K+5, hi = N-PL-3; col = Math.round(lo + bi*(hi-lo)/(nb+1)); }
+    else col = N-1;
+    var hw = Math.ceil((LW[a[3]] || 28)/16)+1;
+    if(w !== "top" && w !== "e" && w !== "s") for(k = col-hw; k <= col+hw; k++) taken[k] = 1;
+    M.lmk.push({i:ix, name:a[0], fact:a[1], where:w, kind:a[3], col:col, key:M.id+":"+ix});
+  });
+  // scenery gets thinner and rockier higher up
+  M.decor = [];
+  var flo = L.flo || ["#ff7aa8", "#ffd23f", "#fff"];
+  for(c = 3; c < N-4; c++){
+    if(taken[c]) continue;
+    var alt = sf[c]/M.sumH, q = r();
+    if(q < .32*(1-alt) + .03 && alt < .8) M.decor.push({c:c, k:"tree", col:L.trees[Math.floor(r()*L.trees.length)]});
+    else if(q < .45 + .2*alt) M.decor.push({c:c, k:"rock"});
+    else if(q < .7 && alt < .85) M.decor.push({c:c, k:"flower", col:flo[Math.floor(r()*flo.length)]});
+  }
+  for(c = N+1; c < M.NT-1; c++){ if(r() < .24 && hh[c] < M.sumH*.72) M.decor.push({c:c, k:"tree", col:L.trees[Math.floor(r()*L.trees.length)]}); }
+  M.parts = []; for(i = 0; i < 40; i++) M.parts.push({x:r(), y:r(), s:14+r()*26, a:r()*6});
+  // things on the trail you can trip over
+  M.obs = []; var no = 3 + Math.floor(N/14), lastc = 5;
+  for(i = 0; i < no; i++){
+    var oc = Math.round(8 + (N-22)*(i+.5)/no + (r()-.5)*3), tr = 0;
+    while(tr++ < 8 && (taken[oc] || taken[oc+1] || taken[oc-1] || oc-lastc < 4)) oc++;
+    if(oc >= N-PL-2 || oc <= 5 || taken[oc]) continue;
+    M.obs.push({col:oc, kind:L.obs[i%2], cd:0}); lastc = oc; taken[oc] = 1;
+  }
+  function free(c0){
+    for(var d = 0; d < N; d++){ var cs = [c0+d, c0-d];
+      for(var j = 0; j < 2; j++){ var cc = cs[j]; if(cc >= 5 && cc <= N-PL-1 && !taken[cc] && !taken[cc-1] && !taken[cc+1]){ taken[cc] = 1; return cc; } } }
+    return c0;
+  }
+  M.signs = []; var pool = FUNNY.slice();
+  [.2, .5, .76].forEach(function(f){ M.signs.push({col:free(Math.round(N*f)), shown:false, text:pool.splice(Math.floor(r()*pool.length), 1)[0]}); });
+  if(L.bridge){ var bc = +Object.keys(M.bridge)[0]; if(bc) M.signs.push({col:bc-2, shown:false, text:"Pretty stream! Look, don't drink. Untreated water can make you sick. Use your own bottle."}); }
+  M.cps = [{col:2, got:true}, {col:J-1, got:false}, {col:K+1, got:false}, {col:Math.round((K+1+N-3)/2), got:false}];
+  M.stamp = {col:free(K+3), got:false};
+  // water bottles and snacks along the trail
+  M.items = []; var seq = ["water", "snack", "water", "water", "snack", "water", "snack", "water"].slice(0, 5 + M.lv*2), cand = [];
+  for(c = 6; c < N-PL; c++) if(!taken[c] && !(c >= J-1 && c <= K+1)) cand.push(c);
+  seq.forEach(function(kk, j){ var c2 = cand[Math.min(cand.length-1, Math.floor((j+.5)*cand.length/seq.length + (r()-.5)*1.5))]; if(c2 === undefined) return; M.items.push({k:kk, col:c2, got:false}); cand.splice(cand.indexOf(c2), 1); });
+  M.items.push({k:"snack", col:J+1, route:"easy", got:false}, {k:"bench", col:J+2, route:"easy", got:false}, {k:"water", col:J+4, route:"steep", got:false});
+  M.PL = PL;
+}
+function resetRun(M){
+  build(M); M.route = null; applyRoute(M, "easy");
+  M.items.forEach(function(o){ o.got = false; o.full = false; }); M.cps.forEach(function(cp, i){ cp.got = i === 0; }); M.signs.forEach(function(s){ s.shown = false; });
+  M.obs.forEach(function(o){ o.cd = 0; }); M.stamp.got = false; M.lmk.forEach(function(l){ l.hit = false; });
+}
+// which landmarks stand on the road you are on? (before the fork, the two branch ones stay hidden)
+function lmkOn(M, l){ return l.where === "e" ? M.route === "easy" : l.where === "s" ? M.route === "steep" : true; }
+function surfY(V, M, c){ c = Math.max(0, Math.min(M.NT-1, c)); return V.y0 - M.hall[c]*V.TS; }
+
+// ---------- the view: how big is a block, where does the ground sit ----------
+function mkView(M, w, h, thumb, topPad){
+  topPad = topPad || (thumb ? 3 : 30);
+  var cols = Math.min(M.NT, M.N+5), ts = Math.floor(w*.97/cols), y0, ok, tries = 0;
+  do{
+    y0 = h - (thumb ? Math.max(ts*1.5, 8) : Math.max(ts*2, 18)); ok = y0 - M.maxH*ts >= topPad+6;
+    M.lmk.forEach(function(l){ if(thumb && l.where !== "top") return; if(y0 - M.sf[l.col]*ts - (LHt[l.kind] || 30) < topPad) ok = false; });
+    if(!ok) ts--;
+  } while(!ok && ts > 3 && tries++ < 40);
+  ts = Math.max(3, ts); y0 = h - (thumb ? Math.max(ts*1.5, 8) : Math.max(ts*2, 18));
+  var V = {w:w, h:h, TS:ts, offX:Math.floor((w-cols*ts)/2), y0:Math.round(y0), thumb:thumb, parts:M.parts, key:w+"x"+h};
+  M.topX = V.offX + (M.N-1+.5)*ts; M.topY = V.y0 - M.sf[M.N-1]*ts;
+  return V;
+}
+function cvMake(w, h){ var cv = document.createElement("canvas"); cv.width = w; cv.height = h; var c = cv.getContext("2d"); c.imageSmoothingEnabled = false; return cv; }
+
+// ---------- still parts, painted once into two canvases (sky + far, terrain) ----------
+function paintStatic(M, V){
+  var L = M.L, w = V.w, h = V.h, y0 = V.y0, TS = V.TS, i, k, c, x, y;
+  V.bg = cvMake(w, h); c = V.bg.getContext("2d");
+  L.sky.forEach(function(col, j){ R(c, 0, Math.floor(j*h/5), w, Math.ceil(h/5)+1, col); });
+  for(i = 1; i < 5; i++){ var by = Math.floor(i*h/5); for(x = 0; x < w; x += 4){ R(c, x + (Math.floor(x/4)%2)*2, by, 2, 2, L.sky[i]); R(c, x + (Math.floor(x/4)%2 ? 0 : 2), by-2, 2, 2, L.sky[i-1]); } }
+  var sunx = L.sun ? L.sun.x*w : w-70, suny = L.sun ? L.sun.y*h : 40, sr = V.thumb ? 7 : 11;
+  if(!L.snowy || true){ R(c, sunx-sr-2, suny-sr-2, sr*2+4, sr*2+4, "rgba(255,240,170,.35)"); R(c, sunx-sr, suny-sr, sr*2, sr*2, "#fff3a8"); R(c, sunx-sr+3, suny-sr+3, sr*2-6, sr*2-6, "#ffe14d"); }
+  var amp = Math.min(h*.5, 130);
+  farLayer(c, V, L.lay[0], L.far, amp, M.seed, y0-6);
+  farLayer(c, V, L.lay[1], L.far2, amp*.62, M.seed+3, y0-6);
+  (L.ex || []).forEach(function(e){
+    if(e === "sea"){ R(c, 0, y0-16, w, 20, "#3d7fd6"); R(c, 0, y0-16, w, 2, "#6aa8f0"); for(x = 0; x < w; x += 14) R(c, x + (x*7)%9, y0-10 + (x*3)%6, 5, 1, "#bfe0ff"); }
+    if(e === "ski"){ for(x = 0; x < 60; x++) R(c, w*.62+x*1.4, y0-72+x*.85, 3, 2, "#ffffff"); R(c, w*.62+30, y0-48, 2, 3, "#ef4a3d"); R(c, w*.62+50, y0-30, 2, 3, "#3a6fd8"); }
+    if(e === "farfalls"){ R(c, w*.14, y0-84, 12, 70, "#76808f"); R(c, w*.14+5, y0-82, 3, 66, "#e6f4ff"); R(c, w*.14+3, y0-14, 8, 3, "#9ad0ff"); }
+  });
+  V.tc = cvMake(w, h); c = V.tc.getContext("2d");
+  var c0 = Math.floor(-V.offX/TS)-1, c1 = Math.ceil((w-V.offX)/TS)+1;
+  for(i = c0; i <= c1; i++){
+    var hgt = (i < 0 || i >= M.NT) ? 0 : M.hall[i], sx = V.offX+i*TS, sy = y0-hgt*TS, kd = (i < 0 || i >= M.NT) ? "top" : surfKind(M, i);
+    if(M.bridge[i]){ for(k = 1; sy+k*TS < h+TS; k++) c.drawImage(topTex(L, k <= 3 ? "water" : "stone0", TS), sx, sy+k*TS); c.drawImage(topTex(L, "plank", TS), sx, sy); continue; }
+    for(k = 0; sy+k*TS < h+TS; k++) c.drawImage(topTex(L, k === 0 ? kd : k < 3 ? "dirt" : "stone0", TS), sx, sy+k*TS);
+  }
+  // fortress wall along the ridge (Geumjeongsan, Gayasan)
+  if(L.wall){ var a = Math.round(L.wall[0]*M.N), z = Math.round(L.wall[1]*M.N);
+    for(i = a; i <= z; i++){ var wx = V.offX+i*TS, wy = y0-M.sf[i]*TS; R(c, wx, wy-TS*1.1, TS, TS*1.1, "#9a9a98"); R(c, wx, wy-TS*1.1, TS, 2, "#b5b5b2"); if(i%2) R(c, wx, wy-TS*1.1-3, Math.ceil(TS*.7), 3, "#9a9a98"); R(c, wx+1, wy-TS*.5, TS-2, 1, "#838381"); } }
+  M.decor.forEach(function(d){
+    var sx = V.offX+d.c*TS, sy = y0-M.hall[d.c]*TS;
+    if(d.k === "tree") drawTree(c, V, L, d, sx, sy);
+    else if(d.k === "rock"){ R(c, sx+1, sy-TS+2, TS-2, TS-2, L.stone); R(c, sx+1, sy-TS+2, TS-2, 2, shade(L.stone, 30)); }
+    else { R(c, sx+TS/2, sy-5, 1, 5, "#3f8d4a"); R(c, sx+TS/2-2, sy-8, 5, 3, d.col); R(c, sx+TS/2, sy-7, 1, 1, "#ffd23f"); }
+  });
+  // rails
+  if(L.rail){ var rc = L.rail === "wood" ? "#8a5a2b" : "#9aa0a8", rd = L.rail === "wood" ? "#5e3d1c" : "#6d737b";
+    Object.keys(M.railOn).forEach(function(q){ q = +q; var sx = V.offX+q*TS, sy = y0-M.sf[q]*TS, sy2 = y0-M.sf[q+1]*TS;
+      R(c, sx+1, sy-TS*.9-3, 2, TS*.9+3, rd); R(c, sx, Math.min(sy, sy2)-TS-2, TS+2, 2, rc); R(c, sx+1, Math.min(sy, sy2)-TS-2, TS, 1, shade(rc, 40)); }); }
+  // benches, start sign, funny signposts, checkpoint flags
+  Object.keys(M.rest).forEach(function(cs){ var sx = V.offX+cs*TS, sy = y0-M.sf[cs]*TS; R(c, sx, sy-9, 14, 3, "#a8783c"); R(c, sx+1, sy-6, 2, 6, "#6a4a22"); R(c, sx+11, sy-6, 2, 6, "#6a4a22"); R(c, sx, sy-9, 14, 1, "#c08c4c"); });
+  { var s0 = V.offX+2*TS, s1 = y0-M.sf[2]*TS; R(c, s0+3, s1-20, 2, 20, "#6a4a22"); R(c, s0-4, s1-28, 18, 9, "#a8783c"); R(c, s0-2, s1-26, 14, 1, "#c08c4c"); }
+  M.signs.forEach(function(s){ var sx = V.offX+s.col*TS+Math.floor(TS/2), sy = y0-M.sf[s.col]*TS; R(c, sx-1, sy-14, 2, 14, "#6a4a22"); R(c, sx-7, sy-23, 14, 10, "#6a4a22"); R(c, sx-6, sy-22, 12, 8, "#f0cd85"); R(c, sx-1, sy-21, 2, 4, "#6a4a22"); R(c, sx-1, sy-16, 2, 2, "#6a4a22"); });
+  M.ledgeCols = Object.keys(M.ledge).filter(function(q){ return M.ledge[q]; });
+  M.obs.forEach(function(o){ var sx = V.offX+o.col*TS, sy = y0-M.sf[o.col]*TS; (OBS[o.kind] || OBS.rock)(c, sx, sy, TS, Math.round(TS*.9)); });
+  // the arrow that marks a tall step
+  M.ledgeCols.forEach(function(q){ q = +q; var ax = V.offX+(q-1)*TS+Math.floor(TS/2), ay = y0-M.sf[q-1]*TS-TS*2-6;
+    R(c, ax, ay, 1, 1, "#ffd23f"); R(c, ax-1, ay+1, 3, 1, "#ffd23f"); R(c, ax-2, ay+2, 5, 1, "#ffd23f"); R(c, ax-1, ay+3, 3, 3, "#ffd23f"); R(c, ax-3, ay+6, 7, 1, "rgba(0,0,0,.25)"); });
+  M.topX = V.offX + (M.N-1+.5)*TS; M.topY = y0 - M.sf[M.N-1]*TS;
+}
+// ---------- moving parts, drawn every frame ----------
+function drawLandmarks(c, M, V, t, only){
+  M.lmk.forEach(function(l){
+    if(!lmkOn(M, l)) return; if(only && only.indexOf(l.where) < 0) return;
+    var x = V.offX + (l.col+.5)*V.TS, y = V.y0 - M.sf[l.col]*V.TS;
+    (LMK[l.kind] || LMK.peak)(c, Math.round(x), Math.round(y), t, {lit:l.hit && l.kind === "tower", open:l.hit, lw:Math.min(60, 4*V.TS)});
+  });
+}
+function drawClouds(c, V, t){
+  for(var i = 0; i < 4; i++){ var cx = ((i*V.w/3 + t*3) % (V.w+120)) - 60, cy = 14+i*Math.round(V.h*.07); R(c, cx, cy, 40, 8, "#fff"); R(c, cx+8, cy-8, 24, 8, "#fff"); R(c, cx+4, cy+8, 28, 4, "#e8f0f8"); }
+}
+// the picture for cards (and anywhere else a small still mountain is needed)
+function renderScene(M, w, h, withHiker){
+  build(M); var V = mkView(M, w, h, true); paintStatic(M, V);
+  var cv = cvMake(w, h), c = cv.getContext("2d");
+  c.drawImage(V.bg, 0, 0); drawClouds(c, V, 6); c.drawImage(V.tc, 0, 0);
+  drawLandmarks(c, M, V, 1.2, ["top", "a"]);
+  if(withHiker){ person(c, V.offX+3*V.TS, V.y0-M.sf[3]*V.TS, 1, {fr:1}, save.h); }
+  return cv;
+}
+
+/* ==== audio.js ==== */
+
+// ---------- quiet ambience (birds, wind, a stream, rain). The single mute button silences everything. ----------
+var ambT = null, ambN = 0;
+function ambStart(){ ambStop(); if(!soundOn) return; ambT = setInterval(ambTick, 1300); }
+function ambStop(){ if(ambT){ clearInterval(ambT); ambT = null; } }
+function ambTick(){
+  if(!soundOn || !G.m || G.mode === "idle" || G.mode === "summit" || page !== "hike") return; ambN++; var M = G.m, a = M.L.amb, col = Math.floor(G.xc);
+  if(a === "birds" && ambN % 3 === 0){ var f = 2000+Math.random()*900; tone(f, .07, .012, f+500); tone(f+200, .07, .01, f+700, .11); }
+  if((a === "wind" || a === "fog" || a === "mist" || a === "snow") || G.xc/M.N > .7) puff(1, .012, 450, "lowpass");
+  if(a === "leaves" && ambN % 2 === 0) puff(.5, .008, 3500, "highpass");
+  if(M.bridge[col] || M.bridge[col-3] || M.bridge[col+3]) puff(.9, .022, 1800, "bandpass");
+  if(G.rain > 0) puff(1, .03, 3200, "highpass");
+}
+function footAmb(){ if(G.m && G.m.bridge[Math.floor(G.xc)]) puff(.09, .05, 1500, "bandpass"); }
+function setSound(on){
+  soundOn = !!on; save.set.sound = soundOn; store(); var b = $("mute"); if(b){ b.setAttribute("aria-pressed", soundOn ? "false" : "true"); b.title = soundOn ? "Sound on (tap to mute)" : "Sound off (tap to unmute)"; b.innerHTML = muteIcon(soundOn); }
+  if(!soundOn) ambStop(); else if(page === "hike" && G.mode !== "idle") ambStart();
+  if(soundOn) tone(660, .12, .04);
+}
+// a tiny pixel speaker, drawn with divs-free svg so it never depends on emoji fonts
+function muteIcon(on){
+  var s = '<svg width="22" height="22" viewBox="0 0 11 11" shape-rendering="crispEdges"><path fill="#fff" d="M1 4h2l3-2v7L3 7H1z"/>';
+  s += on ? '<path fill="#fff" d="M7 3h1v1h-1zM8 4h1v3H8zM7 7h1v1H7zM9 2h1v1H9zM10 3h1v5h-1zM9 8h1v1H9z"/>' : '<path fill="#ff7a6a" d="M7 3h1v1H7zM8 4h1v1H8zM9 5h1v1H9zM10 6h1v1h-1zM10 3h1v1h-1zM9 4h1v1H9zM8 5h1v1H8zM7 6h1v1H7z"/>';
+  return s + '</svg>';
+}
+
+/* ==== hike.js ==== */
+
+// ---------- the hike: walk, jump, stamina and water, a fork, landmarks, summit ----------
+var SPEED = save.set.spd || 1, BASE = 1.0, GRAV = 280, JUMP_MIN = 30;
+var G = {m:null, V:null, mode:"idle", xc:2, hy:0, jy:0, vy:0, dir:1, sta:100, hyd:100, mood:100, inv:{water:3, snack:1}, cap:6, tm:0, t:0, fr:0, step:0, stun:0, cpAt:2, maxX:2, trips:0, found:[], rain:0, rainDone:false, rainAt:0, restT:0, near:null, flagT:0, fwT:0, keys:{l:false, r:false}, spdF:1, jumps:0, drinkT:0, shown:false, res:null, blockT:0};
+var fw = [], last = performance.now();
+function bagUsed(){ return G.inv.water + G.inv.snack; }
+function layoutHike(M){ G.V = mkView(M, W, H, false, Math.ceil(100/PS)); paintStatic(M, G.V); }
+function hint(key, html, ms){ if(save.seen[key]) return; save.seen[key] = 1; store(); showToast(html, ms || 5200); }
+function startHike(m){
+  resetRun(m); G.m = m; layoutHike(m);
+  G.inv = {water:3, snack:1}; G.cap = 6; G.mode = "play"; G.xc = 2; G.cpAt = 2; G.maxX = 2; G.dir = 1; G.jy = G.vy = 0; G.hy = surfY(G.V, m, 2);
+  G.sta = G.hyd = G.mood = 100; G.t = 0; G.stun = 0; G.trips = 0; G.found = []; G.rain = 0; G.rainDone = false; G.restT = 0; G.flagT = 0; G.jumps = 0; G.near = null; G.keys.l = G.keys.r = false; G.shown = false; G.res = null; G.blockT = 0; fw = [];
+  G.rainAt = (m.L.snowy || m.id === "jirisan") ? 0 : (Math.random() < .35 ? m.N*(.3+Math.random()*.35) : 0);
+  go("hike"); closeOv();
+  tone(523, .5, .05); tone(659, .5, .05, 0, .12); last = performance.now(); ambStart();
+  $("hName").textContent = m.en; $("hKo").textContent = m.n + " · " + m.hs;
+  hint("move", "Walk with <b>← →</b> (or A / D). <b>Space</b> jumps, <b>E</b> uses things.<br><small>On a phone: use the on-screen buttons." + (innerHeight > innerWidth && innerWidth < 700 ? " Turn your phone sideways for a bigger mountain." : "") + "</small>", 7000);
+}
+function leaveHike(){ G.mode = "idle"; ambStop(); closeOv(); $("toast").style.display = "none"; $("prompt").style.display = "none"; $("bubble").style.display = "none"; go("explore"); }
+function elevNow(){ var M = G.m, c = Math.max(0, Math.min(M.N-1, Math.floor(G.xc))); return Math.round(M.sf[c]/M.maxH*M.h); }
+function segNow(){
+  var M = G.m, i = 0; M.cps.forEach(function(c, j){ if(G.xc >= c.col) i = j; });
+  var nm = M.trail.seg[i]; if(M.route && G.xc >= M.jx.J-.5 && G.xc < M.jx.K+.5) nm = M.route === "steep" ? M.trail.s : M.trail.e;
+  return {i:i, n:nm};
+}
+function lmDone(M){
+  var n = 0, tot = 0, branch = false;
+  M.lmk.forEach(function(l){ if(l.where === "e" || l.where === "s"){ branch = true; if(!lmkOn(M, l)) return; } tot++; if(l.hit) n++; });
+  if(branch && !M.route) tot++;
+  return [n, tot];
+}
+function doJump(){
+  if(G.mode === "play" && G.jy === 0 && G.stun <= 0){ G.vy = Math.sqrt(2*GRAV*Math.max(JUMP_MIN, G.V.TS*2.4)); G.sta = Math.max(0, G.sta-.8); G.jumps++; tone(520, .18, .05, 880); }
+}
+function drink(){
+  if(G.mode !== "play") return;
+  if(G.inv.water > 0 && G.hyd < 98){ G.inv.water--; G.hyd = Math.min(100, G.hyd+45); G.mood = Math.min(100, G.mood+8); G.drinkT = .8; tone(520, .14, .07, 780); tone(620, .14, .07, 900, .16); }
+  else showToast(G.inv.water ? "You are not thirsty yet." : "No water left. Look for water bottles on the trail!", 1800);
+}
+function eatSnack(){
+  if(G.mode !== "play") return;
+  if(G.inv.snack > 0 && G.sta < 96){ G.inv.snack--; G.sta = Math.min(100, G.sta+35); tone(392, .12, .06); tone(523, .12, .06, 0, .1); }
+  else showToast(G.inv.snack ? "You are not tired yet." : "No snacks left.", 1800);
+}
+// what can E do right now?
+function findNear(){
+  var M = G.m, best = null, bd = 1.15;
+  function test(k, col, label, o){ var d = Math.abs(G.xc-(col+.5)); if(d < bd){ bd = d; best = {k:k, o:o, label:label}; } }
+  M.items.forEach(function(o){ if(o.got || (o.route && o.route !== M.route)) return; if(o.k === "bench") test("bench", o.col, "E: rest on the bench", o); });
+  Object.keys(M.rest).forEach(function(c){ test("bench", +c+1, "E: rest on the bench", {col:+c+1}); });
+  if(!M.stamp.got) test("stamp", M.stamp.col, save.stamps[M.id] ? "E: stamp your passport again" : "E: collect the trail stamp", M.stamp);
+  return best;
+}
+function interact(){
+  if(G.mode !== "play" || !G.near) return; var n = G.near, M = G.m;
+  if(n.k === "bench"){ G.mode = "rest"; G.restT = 3; tone(330, .4, .04); showToast("Resting on the bench... (only drink from your own bottle, never from streams)", 2800); }
+  else if(n.k === "stamp"){ M.stamp.got = true; var first = !save.stamps[M.id]; save.stamps[M.id] = today(); store(); showToast("Trail stamp collected!" + (first ? " It is saved in your passport." : ""), 3200); tone(700, .25, .06); puff(.1, .06, 800); }
+}
+function chooseRoute(r){
+  var M = G.m; if(M.route || G.mode !== "fork") return; M.route = r; applyRoute(M, r); paintStatic(M, G.V); closeOv(); G.mode = "play";
+  showToast(r === "steep" ? "Steep route: shorter, harder on stamina." : "Easy route: longer and gentler, with a bench.", 3600); tone(r === "steep" ? 330 : 440, .3, .06); tone(r === "steep" ? 440 : 550, .3, .06, 0, .15);
+}
+function ranger(){
+  G.mode = "play"; G.xc = G.cpAt; G.sta = Math.max(G.sta, 45); G.hyd = Math.max(G.hyd, 45); G.mood = 60; G.stun = 1.2;
+  showToast("A friendly ranger walked you back to the last checkpoint with water and a rest. You're okay!", 5200);
+}
+function discover(l){
+  l.hit = true; var M = G.m, isNew = !save.lm[l.key]; save.lm[l.key] = save.lm[l.key] || today(); G.found.push(l); store();
+  showToast("<b>" + (isNew ? "NEW · " : "") + esc(l.name) + "</b><br><small>" + esc(l.fact) + "</small>", 6200);
+  tone(784, .18, .05); tone(988, .22, .05, 0, .1); tone(1318, .3, .05, 0, .2);
+}
+function doSummit(){
+  var M = G.m; G.mode = "summit"; G.flagT = 0; G.fwT = 0; G.keys.l = G.keys.r = false; G.xc = M.N-3.2;
+  [523, 659, 784, 1047].forEach(function(f, i){ tone(f, 1, .06, 0, i*.16); }); ambStop();
+  M.lmk.forEach(function(l){ if(l.where === "top" && !l.hit){ l.hit = true; G.found.push(l); save.lm[l.key] = save.lm[l.key] || today(); } });
+  var prev = save.done[M.id], first = !prev;
+  save.done[M.id] = {d:today(), n:(prev ? prev.n : 0)+1, r:M.route || "easy", t:Math.round(G.t), lm:lmDone(M)[0]};
+  store(); G.res = {first:first, t:Math.round(G.t), found:G.found.slice(), lm:lmDone(M), route:M.route || "easy", trips:G.trips};
+}
+function update(dt){
+  var M = G.m, V = G.V, TS = V.TS; G.tm += dt;
+  if(G.drinkT > 0) G.drinkT -= dt;
+  if(G.blockT > 0) G.blockT -= dt;
+  if(G.mode === "play"){
+    G.t += dt;
+    var mv = (G.keys.r ? 1 : 0)-(G.keys.l ? 1 : 0);
+    if(G.stun > 0){ G.stun -= dt; mv = 0; }
+    var tired = G.sta <= 0 ? .35 : G.sta < 20 ? .6 : 1; if(G.hyd <= 0) tired *= .6; G.spdF = tired;
+    if(mv){
+      var nx = G.xc+mv*BASE*SPEED*tired*dt, cur = Math.floor(G.xc), nxt = Math.floor(nx);
+      if(nxt !== cur && nxt >= 0 && nxt < M.N && cur >= 0 && cur < M.N){
+        var rise = M.sf[nxt]-M.sf[cur]-G.jy/TS;
+        if(rise > 1.05){ nx = mv > 0 ? cur+.97 : cur+.03; if(G.blockT <= 0){ G.blockT = 1.4; puff(.06, .05, 300); hint("ledge", "That step is too tall to walk up. <b>Jump</b> (Space, or the ⤒ button) to climb it!", 5200); } }
+      }
+      nx = Math.max(1.2, Math.min(M.N-2.6, nx));
+      var c = Math.floor(G.xc), slope = (M.sf[Math.min(M.N-1, c+1)]-M.sf[Math.max(0, c-1)])/2, climbing = mv*slope;
+      G.dir = mv;
+      G.sta = Math.max(0, G.sta - Math.abs(nx-G.xc)*(.45 + Math.max(0, climbing)*1.7 + (climbing < 0 ? .1 : 0))*(1+.2*M.lv)*(G.rain > 0 ? 1.25 : 1) * (M.route === "steep" && G.xc >= M.jx.J && G.xc < M.jx.K ? 1.6 : 1));
+      G.xc = nx; G.step += dt*SPEED; if(G.step > .28){ G.step = 0; G.fr = 1-G.fr; puff(.07, .04, 420); footAmb(); }
+      G.hyd = Math.max(0, G.hyd - dt*1.3*(1+.15*M.lv));
+    } else { G.hyd = Math.max(0, G.hyd - dt*.25); G.sta = Math.min(100, G.sta + dt*1.2); G.fr = 0; }
+    if(G.hyd <= 0 || G.sta <= 0) G.mood -= dt*(mv ? 4 : 1.5); else G.mood = Math.min(100, G.mood + dt*3);
+    if(G.mood <= 0) ranger();
+    G.maxX = Math.max(G.maxX, G.xc);
+    M.obs.forEach(function(o){
+      if(o.cd > 0) o.cd -= dt;
+      if(!(o.cd > 0) && Math.abs(G.xc-(o.col+.5)) < .25 && G.jy < TS*.85 && G.stun <= 0){
+        o.cd = 1.2; G.stun = .6; G.trips++; G.sta = Math.max(0, G.sta-6); G.xc = Math.max(1.2, G.xc - G.dir*.9); G.vy = 0; puff(.12, .08, 250); tone(180, .25, .07, 120);
+      }
+      var ahead = o.col+.5-G.xc; if(ahead > 0 && ahead < 3 && G.dir > 0) hint("jump", "Something on the trail! <b>Jump</b> over it: Space, or the ⤒ button.", 5200);
+    });
+    M.items.forEach(function(o){
+      if(o.got || (o.route && o.route !== M.route) || o.k === "bench") return;
+      if(Math.abs(G.xc-(o.col+.5)) < .8){
+        if(bagUsed() < G.cap){ o.got = true; G.inv[o.k]++; tone(880, .12, .06); tone(1175, .18, .06, 0, .09); showToast(o.k === "water" ? "Picked up a water bottle" : "Picked up a snack", 1400); }
+        else if(!o.full){ o.full = true; showToast("Your bag is full! Drink or eat something to make room.", 2400); }
+      } else o.full = false;
+    });
+    M.signs.forEach(function(s){ if(!s.shown && Math.abs(G.xc-(s.col+.5)) < .9){ s.shown = true; showToast("<span class='sg'>SIGN</span> " + esc(s.text), 5000); } });
+    M.lmk.forEach(function(l){
+      if(l.hit || l.where === "top" || !lmkOn(M, l)) return;
+      var hw = Math.min(4, (LW[l.kind] || 28)/TS/2*.7 + .9);
+      if(Math.abs(G.xc-(l.col+.5)) < hw) discover(l);
+    });
+    M.cps.forEach(function(cp, i){ if(!cp.got && G.xc >= cp.col+.3){ cp.got = true; G.cpAt = cp.col+.3; showToast("Checkpoint saved. If you get too tired, a ranger will bring you back here.", 3600); tone(660, .3, .06); tone(880, .3, .06, 0, .12); } });
+    if(!M.route && G.xc >= M.jx.J-.2){ G.keys.l = G.keys.r = false; G.mode = "fork"; showFork(); }
+    if(G.rainAt && !G.rainDone && G.xc >= G.rainAt){ G.rainDone = true; G.rain = 16; showToast("A little rain shower! The trail is slippery, so you tire faster. A bench is a good place to wait.", 5200); }
+    if(G.rain > 0) G.rain -= dt;
+    if(G.hyd < 38) hint("drink", "Your water is low. Press <b>Q</b> (or tap the water button) to drink.", 5200);
+    if(G.sta < 32) hint("snack", "You are getting tired. Press <b>F</b> for a snack, or rest on a bench with <b>E</b>.", 5200);
+    if(G.xc >= M.N-3.2) doSummit();
+    G.near = findNear();
+    $("prompt").style.display = G.near ? "block" : "none"; if(G.near) $("prompt").textContent = G.near.label;
+  } else if(G.mode === "rest"){
+    G.restT -= dt; G.sta = Math.min(100, G.sta + dt*15); G.mood = Math.min(100, G.mood + dt*8); G.rain = Math.max(0, G.rain - dt*3);
+    if(G.restT <= 0){ G.mode = "play"; G.hyd = Math.max(0, G.hyd-4); }
+    $("prompt").style.display = "none";
+  } else if(G.mode === "summit"){
+    G.flagT += dt; G.fwT -= dt; if(G.fwT <= 0){ burst(); G.fwT = .45+Math.random()*.35; }
+    $("prompt").style.display = "none";
+    if(G.flagT > 2.8 && !G.shown){ G.shown = true; showSummit(); }
+  } else $("prompt").style.display = "none";
+  // jumping runs on "walking time", so it still works at slow and fast speeds
+  if(G.jy > 0 || G.vy > 0){ var dj = dt*SPEED*(G.spdF || 1); G.vy -= GRAV*dj; G.jy = Math.max(0, G.jy+G.vy*dj); if(G.jy === 0){ G.vy = 0; puff(.05, .03, 500); } }
+  var ty = surfY(V, M, Math.floor(G.xc)); if(G.jy > 0) G.hy = ty; else G.hy += (ty-G.hy)*Math.min(1, dt*14);
+  M.parts.forEach(function(p){ p.y += p.s*dt/H; p.x += Math.sin(G.tm+p.a)*.03*dt; if(p.y > 1){ p.y = -.01; p.x = Math.random(); } });
+  fw.forEach(function(f){ f.x += f.vx*dt; f.y += f.vy*dt; f.vy += 40*dt; f.life -= dt; }); fw = fw.filter(function(f){ return f.life > 0; });
+  hudUpdate();
+}
+var hudCache = {};
+function setTxt(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; $(id).innerHTML = v; } }
+function setBar(id, v){ var el = $(id), i = el.querySelector("i"), w = Math.max(0, Math.min(100, Math.round(v))) + "%"; if(i.style.width !== w) i.style.width = w; el.classList.toggle("low", v < 22); }
+function nextTarget(){
+  var M = G.m, best = null, bd = 1e9;
+  if(!M.route){ var fc = M.jx.J-1; if(fc+.5 > G.xc-.5){ best = "Choose your route at the fork"; bd = fc; } }
+  M.lmk.forEach(function(l){ if(l.hit || l.where === "top" || !lmkOn(M, l)) return; if(l.col+.5 > G.xc-1 && l.col < bd){ bd = l.col; best = l.name; } });
+  if(!M.stamp.got && M.stamp.col+.5 > G.xc && M.stamp.col < bd && false){ best = "Trail stamp"; }
+  var top = M.lmk.filter(function(l){ return l.where === "top"; })[0];
+  return best || ("Summit: " + (top ? top.name : M.en));
+}
+function hudUpdate(){
+  var M = G.m, sg = segNow();
+  setBar("bSt", G.sta); setBar("bHy", G.hyd);
+  setTxt("nW", G.inv.water); setTxt("nS", G.inv.snack);
+  var ld = lmDone(M); setTxt("hLm", "<b>" + ld[0] + "/" + ld[1] + "</b><small>places</small>");
+  setTxt("obj", "<span class='arr'>&#9656;</span> " + esc(nextTarget()) + " <small>· trail " + (sg.i+1) + "/4 · " + esc(sg.n) + " · " + elevNow() + " m</small>");
+  var b = $("bubble"), msg = G.stun > 0 && G.mode === "play" ? "Ouch!" : G.mode === "play" && G.hyd < 22 ? "Thirsty! [Q]" : G.mode === "play" && G.sta < 20 ? "Tired... [F] / rest" : "";
+  if(msg){ b.style.display = "block"; b.innerHTML = msg; b.style.left = ((G.V.offX+G.xc*G.V.TS)/W*100) + "%"; b.style.top = ((G.hy-G.jy-40)/H*100) + "%"; } else b.style.display = "none";
+  drawProfile($("prof"));
+}
+function drawProfile(cv){
+  var M = G.m, c = cv.getContext("2d"), w = cv.width, h = cv.height; c.clearRect(0, 0, w, h);
+  var pad = 6, bw = w-pad*2, bh = h-pad*2-4, mx = M.sumH+1, base = h-pad;
+  function X(col){ return pad+col/(M.N-1)*bw; } function Y(v){ return base-v/mx*bh; }
+  c.fillStyle = "#4f7a45"; c.beginPath(); c.moveTo(X(0), base); for(var i = 0; i < M.N; i++) c.lineTo(X(i), Y(M.sf[i])); c.lineTo(X(M.N-1), base); c.closePath(); c.fill();
+  c.strokeStyle = "#f4e7b0"; c.lineWidth = 2; c.beginPath(); for(i = 0; i < M.N; i++){ i ? c.lineTo(X(i), Y(M.sf[i])) : c.moveTo(X(i), Y(M.sf[i])); } c.stroke();
+  if(!M.route){ c.strokeStyle = "#ffd23f"; c.setLineDash([3, 3]); c.beginPath(); for(i = 0; i < JL; i++){ var cc = M.jx.J+i; i ? c.lineTo(X(cc), Y(M.jx.steep[i])) : c.moveTo(X(cc), Y(M.jx.steep[i])); } c.stroke(); c.setLineDash([]); }
+  M.lmk.forEach(function(l){ if(!lmkOn(M, l) && M.route) return; if(!M.route && (l.where === "e" || l.where === "s")) return; var x = X(l.col), y = Y(M.sf[l.col]); c.fillStyle = "#1d1d1d"; c.fillRect(x-3, y-9, 6, 6); c.fillStyle = l.hit ? "#6ed05a" : "#ffd23f"; c.fillRect(x-2, y-8, 4, 4); });
+  var px = X(G.xc), py = Y(M.sf[Math.max(0, Math.min(M.N-1, Math.floor(G.xc)))]); c.fillStyle = "#1d1d1d"; c.fillRect(px-4, py-12, 9, 9); c.fillStyle = "#4aa8ff"; c.fillRect(px-3, py-11, 7, 7);
+}
+// ----- little pixel props -----
+function burst(){
+  var cx = W*.1+Math.random()*W*.8, cy = H*.06+Math.random()*H*.32, col = ["#ff6f9c", "#ffd23f", "#6ff0ff", "#c58cff", "#8dff9a"][Math.floor(Math.random()*5)];
+  for(var a = 0; a < 30; a++){ var an = a/30*Math.PI*2, sp = (28+Math.random()*26)*W/320; fw.push({x:cx, y:cy, vx:Math.cos(an)*sp, vy:Math.sin(an)*sp, life:1.4, col:col}); }
+  puff(.35, .05, 900, "bandpass"); tone(900+Math.random()*500, .5, .03, 300);
+}
+function dBottle(c, sx, sy){ R(c, sx-1, sy, 3, 2, "#fff"); R(c, sx-1, sy+2, 3, 2, "#bfe6ff"); R(c, sx-3, sy+4, 7, 9, "#4aa8ff"); R(c, sx-2, sy+5, 1, 5, "#cfe9ff"); R(c, sx+3, sy+4, 1, 9, "#2f7fd0"); }
+function dSnack(c, sx, sy){ R(c, sx-1, sy+3, 3, 2, "#fff"); R(c, sx-2, sy+5, 5, 2, "#fff"); R(c, sx-3, sy+7, 7, 3, "#f4f4f4"); R(c, sx-2, sy+8, 5, 2, "#2a3a2a"); R(c, sx-3, sy+10, 7, 1, "#cfcfcf"); }
+function dStamp(c, sx, sy, got){ R(c, sx-1, sy-16, 3, 16, "#6a4a22"); R(c, sx-6, sy-22, 13, 8, "#e8d9a8"); R(c, sx-6, sy-22, 13, 1, "#fff6dc"); R(c, sx-3, sy-20, 7, 4, got ? "#aaa" : "#d9503f"); R(c, sx-1, sy-19, 3, 2, "#fff"); }
+function dBench(c, sx, sy){ R(c, sx-7, sy-9, 14, 3, "#a8783c"); R(c, sx-6, sy-6, 2, 6, "#6a4a22"); R(c, sx+4, sy-6, 2, 6, "#6a4a22"); R(c, sx-7, sy-9, 14, 1, "#c08c4c"); }
+function dFlag(c, sx, sy, got, t){ R(c, sx, sy-20, 2, 20, "#e8e8e8"); var w = Math.floor(t*4)%2; R(c, sx+2, sy-20, 9, 6, got ? "#4fbf5a" : "#9a9a9a"); R(c, sx+2, sy-15+(w ? 0 : 1), 9, 1, got ? "#2f8f3a" : "#777"); }
+function dFork(c, sx, sy){ R(c, sx-1, sy-28, 3, 28, "#6a4a22"); R(c, sx-14, sy-28, 16, 6, "#d9503f"); R(c, sx+2, sy-28, 5, 6, "#d9503f"); R(c, sx-12, sy-26, 8, 2, "#fff"); R(c, sx-14, sy-20, 18, 6, "#4fa05b"); R(c, sx+4, sy-20, 5, 6, "#4fa05b"); R(c, sx-12, sy-18, 8, 2, "#fff"); }
+function draw(){
+  var M = G.m, c = hc, i, V;
+  if(!G.V || G.V.key !== W+"x"+H) layoutHike(M);
+  V = G.V; c.imageSmoothingEnabled = false;
+  c.drawImage(V.bg, 0, 0); drawClouds(c, V, G.tm);
+  if(M.L.amb === "wind" || M.L.amb === "fog" || M.L.amb === "mist") ambDraw(c, V, M.L.amb, G.tm, M.L);
+  c.drawImage(V.tc, 0, 0);
+  drawLandmarks(c, M, V, G.tm);
+  function pos(col, lift){ return [Math.round(V.offX+(col+.5)*V.TS), Math.round(surfY(V, M, col)-(lift || 0))]; }
+  var p, t = G.tm;
+  p = pos(M.jx.J-1); dFork(c, p[0], p[1]);
+  if(!M.route){ for(i = 0; i < JL; i++){ var q = pos(M.jx.J+i); var yy = V.y0-M.jx.steep[i]*V.TS; if(Math.floor(t*3+i)%2) R(c, q[0], yy-3, 2, 2, "#ffd23f"); } }
+  M.cps.forEach(function(cp, k){ if(k === 0) return; p = pos(cp.col); dFlag(c, p[0]-3, p[1], cp.got, t); });
+  p = pos(M.stamp.col); dStamp(c, p[0], p[1], M.stamp.got || !!save.stamps[M.id]);
+  M.items.forEach(function(o){
+    if(o.got) return;
+    if(o.route && o.route !== M.route){ if(M.route) return; return; }
+    p = pos(o.col);
+    if(o.k === "water") dBottle(c, p[0], p[1]-26+Math.round(Math.sin(t*4+o.col)*2));
+    else if(o.k === "snack") dSnack(c, p[0], p[1]-20+Math.round(Math.sin(t*4+o.col)*2));
+    else if(o.k === "bench") dBench(c, p[0], p[1]);
+  });
+  if(M.L.amb !== "wind" && M.L.amb !== "fog" && M.L.amb !== "mist") ambDraw(c, V, M.L.amb, t, M.L);
+  if(G.rain > 0){ c.fillStyle = "rgba(40,60,90,.18)"; c.fillRect(0, 0, W, H); c.globalAlpha = .7; for(i = 0; i < 70; i++){ R(c, ((i*47+t*40)%(W+20))-10, ((i*31+t*190)%(H+10))-5, 1, 4, "#d6ecff"); } c.globalAlpha = 1; }
+  var px = V.offX+G.xc*V.TS, py = G.hy-G.jy;
+  if(G.mode === "summit"){ sumFx(c, M, V, G.flagT); var fh = Math.min(26, Math.round(G.flagT*26)), fx = Math.round(px-14);
+    R(c, fx, py-fh, 2, fh, "#e8e8e8"); if(fh > 14){ var w = Math.floor(G.tm*5)%2; R(c, fx+2, py-fh, 10, 7, "#ef4a3d"); R(c, fx+2, py-fh+(w ? 5 : 6), 10, 2, "#c8362b"); R(c, fx+2, py-fh, 10, 1, "#ff7a6a"); } }
+  var moving = G.mode === "play" && (G.keys.l || G.keys.r) && G.stun <= 0;
+  person(c, px, py, G.dir, {sit:G.mode === "rest" || G.stun > 0, thirsty:G.hyd < 30, drink:G.drinkT > 0, fr:G.jy > 0 ? 1 : G.fr, walk:moving && G.jy === 0, up:G.mode === "summit" || G.jy > 0}, save.h);
+  c.globalCompositeOperation = "lighter";
+  fw.forEach(function(f){ c.globalAlpha = Math.max(0, f.life/1.4); R(c, f.x, f.y, 2, 2, f.col); R(c, f.x-f.vx*.04, f.y-f.vy*.04, 1, 1, f.col); });
+  c.globalCompositeOperation = "source-over"; c.globalAlpha = 1;
+}
+// ----- input: keyboard + touch -----
+document.addEventListener("keydown", function(e){
+  var tg = e.target && e.target.tagName; if(tg === "INPUT" || tg === "TEXTAREA" || tg === "SELECT") return;
+  var k = e.code;
+  if(page !== "hike"){ if(k === "Escape") closeOv(); return; }
+  if(G.mode === "fork"){ if(k === "Digit1" || k === "KeyW") chooseRoute("steep"); if(k === "Digit2" || k === "KeyS") chooseRoute("easy"); return; }
+  if(k === "Escape"){ e.preventDefault(); if(G.mode === "play") openPause(); else if(G.mode === "paused") resumeHike(); return; }
+  if(G.mode !== "play") return;
+  if(k === "ArrowLeft" || k === "KeyA") G.keys.l = true;
+  else if(k === "ArrowRight" || k === "KeyD") G.keys.r = true;
+  else if(k === "Space" || k === "ArrowUp" || k === "KeyW"){ e.preventDefault(); doJump(); }
+  else if(k === "KeyE" || k === "Enter") interact();
+  else if(k === "KeyQ") drink(); else if(k === "KeyF") eatSnack();
+  else if(k === "Equal" || k === "NumpadAdd") setSpeed(SPEED+.25); else if(k === "Minus" || k === "NumpadSubtract") setSpeed(SPEED-.25);
+  if(k.indexOf("Arrow") === 0) e.preventDefault();
+});
+document.addEventListener("keyup", function(e){ var k = e.code; if(k === "ArrowLeft" || k === "KeyA") G.keys.l = false; if(k === "ArrowRight" || k === "KeyD") G.keys.r = false; });
+window.addEventListener("blur", function(){ G.keys.l = G.keys.r = false; });
+function hold(id, key){ var b = $(id); function on(e){ e.preventDefault(); G.keys[key] = true; b.classList.add("dn"); } function off(){ G.keys[key] = false; b.classList.remove("dn"); }
+  b.addEventListener("pointerdown", on); ["pointerup", "pointerleave", "pointercancel"].forEach(function(ev){ b.addEventListener(ev, off); }); }
+hold("tL", "l"); hold("tR", "r");
+$("tJ").addEventListener("pointerdown", function(e){ e.preventDefault(); doJump(); });
+$("tE").addEventListener("pointerdown", function(e){ e.preventDefault(); interact(); });
+$("qWater").onclick = drink; $("qSnack").onclick = eatSnack;
+$("pauseBtn").onclick = function(){ if(G.mode === "play") openPause(); };
+function setSpeed(v){ SPEED = Math.max(.5, Math.min(3, Math.round(v*4)/4)); save.set.spd = SPEED; store(); if($("spdv")) $("spdv").textContent = SPEED + "x"; if($("spdr")) $("spdr").value = SPEED; $("spdBtn").textContent = SPEED + "x speed"; }
+$("spdBtn").onclick = function(){ var L = [.5, 1, 1.5, 2, 3], i = L.indexOf(SPEED); setSpeed(L[(i+1)%L.length]); };
+setSpeed(SPEED);
+
+/* ==== maps.js ==== */
+
+// ---------- Korea in pixels + the map view (used for Explore and for My Map) ----------
+var MW = 180, MH = 306, CS = 3;
+function mxy(lng, lat){ return [(lng-125.6)*41+5, (38.8-lat)*51+3]; }
+var landMask = null, GW = MW/CS, GH = MH/CS, baseCache = {};
+function makeMask(){
+  var ridge = [[128.5, 38.1], [128.9, 37.1], [128.6, 36.4], [128.1, 35.8], [127.7, 35.35]];
+  var t = document.createElement("canvas"); t.width = GW; t.height = GH; var tc = t.getContext("2d");
+  var ll = [[126.68,37.78],[126.25,37.72],[126.25,37.50],[126.55,37.45],[126.70,37.20],[126.85,37.10],[126.80,36.90],[126.40,36.95],[126.15,36.85],[126.20,36.65],[126.50,36.40],[126.55,36.00],[126.45,35.75],[126.30,35.60],[126.50,35.40],[126.40,35.15],[126.30,34.85],[126.35,34.55],[126.55,34.30],[126.85,34.40],[127.15,34.55],[127.45,34.45],[127.60,34.65],[127.80,34.70],[128.00,34.85],[128.45,34.85],[128.65,34.70],[128.75,35.05],[129.05,35.00],[129.30,35.30],[129.45,35.55],[129.45,35.95],[129.40,36.40],[129.45,36.80],[129.40,37.05],[129.20,37.30],[129.10,37.50],[128.95,37.75],[128.60,38.20],[128.37,38.62],[128.00,38.30],[127.40,38.30],[126.90,37.95]];
+  tc.fillStyle = "#000"; tc.beginPath();
+  ll.forEach(function(a, i){ var p = mxy(a[0], a[1]); i ? tc.lineTo(p[0]/CS, p[1]/CS) : tc.moveTo(p[0]/CS, p[1]/CS); }); tc.closePath(); tc.fill();
+  var jc = mxy(126.55, 33.38); tc.beginPath(); tc.ellipse(jc[0]/CS, jc[1]/CS, 16/CS, 9.5/CS, 0, 0, 6.2832); tc.fill();
+  var d = tc.getImageData(0, 0, GW, GH).data, land = [], x, y;
+  for(y = 0; y < GH; y++){ land.push([]); for(x = 0; x < GW; x++) land[y].push(d[(y*GW+x)*4+3] > 110); }
+  var rp = []; for(var q = 0; q < 4; q++) for(var s = 0; s < 30; s++){ var f = s/30, p = mxy(ridge[q][0]+(ridge[q+1][0]-ridge[q][0])*f, ridge[q][1]+(ridge[q+1][1]-ridge[q][1])*f); rp.push([p[0]/CS, p[1]/CS]); }
+  var nearRidge = []; for(y = 0; y < GH; y++){ nearRidge.push([]); for(x = 0; x < GW; x++){ var nr = false; if(land[y][x]) for(var k = 0; k < rp.length; k += 2) if(Math.abs(rp[k][0]-x) < 3 && Math.abs(rp[k][1]-y) < 3){ nr = true; break; } nearRidge[y].push(nr); } }
+  landMask = {land:land, ridge:nearRidge};
+}
+var PALS = {
+  explore:{land:["#6fbf5f", "#67b658", "#79c968"], hill:["#8d9298", "#7e848a", "#999ea4"], edge:["#e6d596", "#d9c681"], shallow:"#6aa8f0", sea:"#4a8de3", wave:"#8fc3ff", wave2:"#3d7fd6", ink:"#fff"},
+  journal:{land:["#eadcae", "#e4d4a2", "#efe2b8"], hill:["#cdb98a", "#c4b080", "#d6c498"], edge:["#a98a52", "#b99a62"], shallow:"#e6d8ac", sea:"#efe3bd", wave:"#d8c690", wave2:"#e2d4a4", ink:"#6b5430"}
+};
+function koreaBase(mode){
+  if(baseCache[mode]) return baseCache[mode]; if(!landMask) makeMask();
+  var cv = document.createElement("canvas"); cv.width = MW; cv.height = MH; var b = cv.getContext("2d"), r = rng(5), P = PALS[mode], land = landMask.land, x, y;
+  for(y = 0; y < GH; y++) for(x = 0; x < GW; x++){
+    if(!land[y][x]) continue;
+    var edge = !(land[y-1] && land[y-1][x] && land[y+1] && land[y+1][x] && land[y][x-1] && land[y][x+1]);
+    b.fillStyle = edge ? P.edge[Math.floor(r()*2)] : landMask.ridge[y][x] ? P.hill[Math.floor(r()*3)] : P.land[Math.floor(r()*3)]; b.fillRect(x*CS, y*CS, CS, CS);
+  }
+  // a lighter ring of shallow water around the coast
+  var sh = document.createElement("canvas"); sh.width = MW; sh.height = MH; var s2 = sh.getContext("2d"); s2.fillStyle = P.shallow;
+  for(y = 0; y < GH; y++) for(x = 0; x < GW; x++){
+    if(land[y][x]) continue; var near = false;
+    for(var dy = -1; dy <= 1 && !near; dy++) for(var dx = -1; dx <= 1; dx++){ if(land[y+dy] && land[y+dy][x+dx]){ near = true; break; } }
+    if(near) s2.fillRect(x*CS, y*CS, CS, CS);
+  }
+  var out = document.createElement("canvas"); out.width = MW; out.height = MH; var oc = out.getContext("2d"); oc.drawImage(sh, 0, 0); oc.drawImage(cv, 0, 0);
+  return baseCache[mode] = out;
+}
+var LVCOL = [["#4fa05b", "#3a7f45", "#76c383"], ["#e0a02a", "#b87e18", "#f4c25a"], ["#d9503f", "#a83a2c", "#f08070"]];
+function mIcon(c, x, y, lv, a, gray){
+  var w = [9, 11, 13][lv], h = [6, 9, 12][lv], col = gray ? ["#a89a78", "#8a7c5c", "#c4b690"] : LVCOL[lv], i, rw;
+  c.globalAlpha = a; R(c, x-w/2-1, y-1, w+2, 2, "rgba(0,0,0,.25)");
+  for(i = 0; i < h; i++){ rw = Math.max(1, Math.round(w*(i+1)/h)); if(rw%2 === 0) rw++; var lx = x-Math.floor(rw/2);
+    R(c, lx-1, y-h+i, rw+2, 1, "#1d1d1d"); R(c, lx, y-h+i, rw, 1, col[0]); R(c, x+1, y-h+i, Math.max(0, Math.floor(rw/2)), 1, col[1]); if(lv === 2 && i < 3) R(c, lx+1, y-h+i, Math.max(1, rw-2), 1, "#fff"); else if(i < 2) R(c, lx, y-h+i, rw, 1, col[2]); }
+  R(c, x-w/2-1, y-1, w+2, 1, "#1d1d1d"); c.globalAlpha = 1;
+}
+function flagIcon(c, x, y, col, t){ R(c, x, y-12, 1, 12, "#1d1d1d"); var w = Math.floor(t*4)%2; R(c, x+1, y-12, 6, 4, "#1d1d1d"); R(c, x+1, y-11, 5, 3, col); R(c, x+1, y-9+(w ? 0 : 1), 5, 1, shade(col.length === 7 ? col : "#ffcf3f", -40)); }
+function pinIcon(c, x, y, col){ R(c, x-3, y-11, 7, 7, "#1d1d1d"); R(c, x-2, y-12, 5, 9, "#1d1d1d"); R(c, x-2, y-10, 5, 5, col); R(c, x-1, y-11, 3, 7, col); R(c, x-1, y-9, 2, 2, "#fff"); R(c, x-1, y-4, 3, 2, "#1d1d1d"); R(c, x, y-3, 1, 3, "#1d1d1d"); R(c, x-1, y-4, 3, 1, col); }
+function miniHiker(c, x, y, h, bob){
+  y -= bob || 0; R(c, x-3, y, 7, 1, "rgba(0,0,0,.25)");
+  R(c, x-2, y-3, 2, 3, h.pants); R(c, x, y-3, 2, 3, shade(h.pants, -20)); R(c, x-3, y-8, 7, 5, h.jk); R(c, x+3, y-8, 2, 4, h.pack); R(c, x-2, y-12, 5, 4, h.skin);
+  R(c, x-2, y-13, 5, 2, h.hat !== "none" ? h.hatC : h.hairC); if(h.hat === "bucket" || h.hat === "straw") R(c, x-4, y-11, 9, 1, shade(h.hatC, -15)); if(h.hat === "cap") R(c, x+2, y-11, 3, 1, shade(h.hatC, -20));
+  R(c, x-1, y-10, 1, 1, "#2a1f1a"); R(c, x+1, y-10, 1, 1, "#2a1f1a");
+}
+function MapView(cv, mode, opts){
+  var mv = {cv:cv, c:cv.getContext("2d"), mode:mode, z:1, tx:0, ty:0, sel:null, hov:null, filter:"all", t:0, anim:{}, parts:[], pad:16, cover:opts.cover, state:opts.state, onSelect:opts.onSelect, onHover:opts.onHover, ptrs:{}, drag:null, pinch:null, zMin:.5};
+  var P = PALS[mode];
+  mv.region = function(){ var r = mv.cover(); return [r[0]/PS, r[1]/PS, r[2]/PS, r[3]/PS]; };
+  mv.fit = function(){
+    var r = mv.region(), aw = Math.max(40, r[2]-r[0]-mv.pad*2), ah = Math.max(40, r[3]-r[1]-mv.pad*2);
+    mv.zMin = Math.max(.4, Math.min(aw/MW, ah/MH)); mv.z = mv.zMin; mv.clamp(true);
+  };
+  mv.clamp = function(center){
+    var r = mv.region(), w = MW*mv.z, h = MH*mv.z, aw = r[2]-r[0], ah = r[3]-r[1];
+    if(center || w <= aw-mv.pad*2) mv.tx = r[0] + (aw-w)/2; else mv.tx = Math.max(r[2]-mv.pad-w, Math.min(r[0]+mv.pad, mv.tx));
+    if(center || h <= ah-mv.pad*2) mv.ty = r[1] + (ah-h)/2; else mv.ty = Math.max(r[3]-mv.pad-h, Math.min(r[1]+mv.pad, mv.ty));
+  };
+  mv.zoomTo = function(nz, cx, cy){
+    nz = Math.max(mv.zMin, Math.min(3.2, nz)); var wx = (cx-mv.tx)/mv.z, wy = (cy-mv.ty)/mv.z; mv.z = nz; mv.tx = cx-wx*nz; mv.ty = cy-wy*nz; mv.clamp(false);
+  };
+  mv.zoomBy = function(f){ var r = mv.region(); mv.zoomTo(mv.z*f, (r[0]+r[2])/2, (r[1]+r[3])/2); };
+  mv.sx = function(x){ return Math.round(mv.tx + x*mv.z); }; mv.sy = function(y){ return Math.round(mv.ty + y*mv.z); };
+  mv.pick = function(px, py){
+    var best = null, bd = 12*12; mountains.forEach(function(m){ var x = mv.sx(m.x), y = mv.sy(m.y)-5, d = (px-x)*(px-x)+(py-y)*(py-y); if(d < bd){ bd = d; best = m; } }); return best;
+  };
+  mv.select = function(m, focus){
+    mv.sel = m; if(m && focus){ var r = mv.region(); if(mv.z < 1.4){ mv.z = Math.min(3, Math.max(mv.z, 1.6)); } mv.tx = (r[0]+r[2])/2 - m.x*mv.z; mv.ty = (r[1]+r[3])/2 - m.y*mv.z; mv.clamp(false); }
+    if(mv.onSelect) mv.onSelect(m, focus);
+  };
+  mv.drop = function(id){ mv.anim[id] = {t:0, burst:false}; };
+  mv.resize = function(w, h){ mv.cv.width = Math.max(2, Math.floor(w)); mv.cv.height = Math.max(2, Math.floor(h)); mv.c.imageSmoothingEnabled = false; mv.fit(); };
+  mv.draw = function(dt){
+    var c = mv.c, w = mv.cv.width, h = mv.cv.height, t = mv.t += dt, i, x, y; c.imageSmoothingEnabled = false;
+    R(c, 0, 0, w, h, P.sea);
+    var off = Math.floor(t*5)%28;
+    for(y = 4; y < h; y += 14){ for(x = -28 + ((y/14)%2 ? 14 : 0) + off; x < w; x += 28) R(c, x, y, 7, 1, P.wave); }
+    for(y = 11; y < h; y += 14){ for(x = -28 + ((y/14)%2 ? 0 : 14) + off; x < w; x += 28) R(c, x, y, 4, 1, P.wave2); }
+    var base = koreaBase(mode); c.drawImage(base, 0, 0, MW, MH, mv.tx, mv.ty, MW*mv.z, MH*mv.z);
+    var k = mv.z > 1.7 ? 2 : 1;
+    txt(c, "YELLOW", mv.sx(2), mv.sy(116), k, P.ink, mode === "explore" ? "#2a5a9a" : null); txt(c, "SEA", mv.sx(10), mv.sy(116)+9*k, k, P.ink, mode === "explore" ? "#2a5a9a" : null);
+    txt(c, "EAST", mv.sx(150), mv.sy(140), k, P.ink, mode === "explore" ? "#2a5a9a" : null); txt(c, "SEA", mv.sx(155), mv.sy(140)+9*k, k, P.ink, mode === "explore" ? "#2a5a9a" : null);
+    txt(c, "JEJU", mv.sx(33), mv.sy(296), k, P.ink, mode === "explore" ? "#2a5a9a" : null);
+    if(mode === "journal"){ R(c, 2, 2, w-4, 1, "#a98a52"); R(c, 2, h-3, w-4, 1, "#a98a52"); R(c, 2, 2, 1, h-4, "#a98a52"); R(c, w-3, 2, 1, h-4, "#a98a52"); txt(c, "N", w-14, 8, 1, "#6b5430"); R(c, w-12, 17, 1, 8, "#6b5430"); R(c, w-14, 21, 5, 1, "#6b5430"); }
+    // markers (back to front)
+    var list = mountains.slice().sort(function(a, b){ return a.y-b.y; });
+    list.forEach(function(m){
+      var st = mv.state(m), x = mv.sx(m.x), y = mv.sy(m.y), isSel = mv.sel === m, a = st.dim ? .28 : 1, an = mv.anim[m.id], dy = 0;
+      if(mode === "explore"){
+        if(isSel){ dy = Math.abs(Math.sin(t*5))*3; var rr = 11+Math.floor(Math.sin(t*4)*2); c.globalAlpha = .9; for(i = 0; i < 20; i++){ var an2 = i/20*6.283; R(c, x+Math.cos(an2)*rr, y-5+Math.sin(an2)*rr*.7, 2, 2, "#fff"); } c.globalAlpha = 1; }
+        mIcon(c, x, y-dy, m.lv, a, false);
+        if(st.done && !st.dim) flagIcon(c, x+4, y-dy-6, "#ffcf3f", t);
+      } else {
+        var shown = st.pin || st.real;
+        mIcon(c, x, y, m.lv, shown ? 1 : .55, !shown);
+        var fy = 0; if(an){ an.t += dt; var u = an.t/.7; if(u < 1){ fy = -Math.round(70*(1-u)*(1-u)); } else { if(!an.burst){ an.burst = true; mv.parts = []; for(i = 0; i < 18; i++){ var aa = i/18*6.283; mv.parts.push({x:m.x, y:m.y-6, vx:Math.cos(aa)*(28+(i%3)*10), vy:Math.sin(aa)*(22+(i%2)*8)-10, life:.8, col:i%2 ? "#ffcf3f" : "#fff"}); } tone(220, .18, .09, 90); tone(660, .2, .05, 0, .08); tone(990, .25, .04, 0, .16); an.ring = 0; }
+            if(an.t > 2.2) delete mv.anim[m.id]; } }
+        if(st.pin) flagIcon(c, x+4, y-6+fy, "#ffcf3f", t);
+        if(st.real) pinIcon(c, x-5, y-6+(st.pin ? 0 : fy), "#4fbf5a");
+      }
+      if(isSel || mv.hov === m){ var lab = m.en; txt(c, lab, x - Math.floor(txtW(lab, 1)/2), y+3, 1, "#fff", "#1d1d1d"); }
+    });
+    // pin-drop dust + ring
+    Object.keys(mv.anim).forEach(function(id){ var an = mv.anim[id], m = mByName(id); if(!m || !an.burst) return; an.ring += dt; var rr2 = an.ring*40, al = Math.max(0, 1-an.ring/.7); if(al > 0){ c.globalAlpha = al; for(i = 0; i < 24; i++){ var a3 = i/24*6.283; R(c, mv.sx(m.x)+Math.cos(a3)*rr2, mv.sy(m.y)-2+Math.sin(a3)*rr2*.45, 2, 2, "#ffcf3f"); } c.globalAlpha = 1; } });
+    mv.parts.forEach(function(p){ p.life -= dt; p.x += p.vx*dt/mv.z; p.y += p.vy*dt/mv.z; p.vy += 60*dt; if(p.life > 0){ c.globalAlpha = Math.min(1, p.life*1.5); R(c, mv.sx(p.x), mv.sy(p.y), 2, 2, p.col); c.globalAlpha = 1; } });
+    mv.parts = mv.parts.filter(function(p){ return p.life > 0; });
+    if(mode === "explore" && mv.sel){ var sm = mv.sel; miniHiker(c, mv.sx(sm.x)-13, mv.sy(sm.y)+1, save.h, Math.abs(Math.sin(t*5))*2); }
+  };
+  // pointer: drag to pan, tap a mountain, wheel / pinch to zoom
+  var cvEl = mv.cv;
+  function rel(e){ var b = cvEl.getBoundingClientRect(); return [(e.clientX-b.left)/b.width*cvEl.width, (e.clientY-b.top)/b.height*cvEl.height]; }
+  cvEl.addEventListener("pointerdown", function(e){ var p = rel(e); mv.ptrs[e.pointerId] = p; cvEl.setPointerCapture && cvEl.setPointerCapture(e.pointerId);
+    var ids = Object.keys(mv.ptrs); if(ids.length === 2){ var a = mv.ptrs[ids[0]], b = mv.ptrs[ids[1]]; mv.pinch = {d:Math.hypot(a[0]-b[0], a[1]-b[1]), z:mv.z}; mv.drag = null; }
+    else mv.drag = {x:p[0], y:p[1], tx:mv.tx, ty:mv.ty, moved:false}; });
+  cvEl.addEventListener("pointermove", function(e){ var p = rel(e); if(mv.ptrs[e.pointerId]) mv.ptrs[e.pointerId] = p;
+    if(mv.pinch){ var ids = Object.keys(mv.ptrs); if(ids.length >= 2){ var a = mv.ptrs[ids[0]], b = mv.ptrs[ids[1]]; mv.zoomTo(mv.pinch.z*Math.hypot(a[0]-b[0], a[1]-b[1])/mv.pinch.d, (a[0]+b[0])/2, (a[1]+b[1])/2); } return; }
+    if(mv.drag){ var dx = p[0]-mv.drag.x, dy = p[1]-mv.drag.y; if(Math.abs(dx)+Math.abs(dy) > 5) mv.drag.moved = true; if(mv.drag.moved){ mv.tx = mv.drag.tx+dx; mv.ty = mv.drag.ty+dy; mv.clamp(false); cvEl.classList.add("drag"); } }
+    var hv = (mv.drag && mv.drag.moved) ? null : mv.pick(p[0], p[1]); if(hv !== mv.hov){ mv.hov = hv; cvEl.style.cursor = hv ? "pointer" : ""; if(mv.onHover) mv.onHover(hv, e); } else if(hv && mv.onHover) mv.onHover(hv, e); });
+  function up(e){ var p = rel(e); delete mv.ptrs[e.pointerId]; if(mv.pinch){ if(Object.keys(mv.ptrs).length < 2) mv.pinch = null; return; }
+    if(mv.drag && !mv.drag.moved){ var m = mv.pick(p[0], p[1]); if(m) mv.select(m, false); else if(mode === "explore") mv.select(null, false); }
+    mv.drag = null; cvEl.classList.remove("drag"); }
+  cvEl.addEventListener("pointerup", up); cvEl.addEventListener("pointercancel", function(e){ delete mv.ptrs[e.pointerId]; mv.drag = null; mv.pinch = null; cvEl.classList.remove("drag"); });
+  cvEl.addEventListener("pointerleave", function(){ if(mv.hov){ mv.hov = null; if(mv.onHover) mv.onHover(null); } });
+  cvEl.addEventListener("wheel", function(e){ e.preventDefault(); var p = rel(e); mv.zoomTo(mv.z*(e.deltaY < 0 ? 1.18 : 1/1.18), p[0], p[1]); }, {passive:false});
+  return mv;
+}
+
+/* ==== title.js ==== */
+
+// ---------- title screen: an animated pixel mountain landscape ----------
+var TL = {id:"title", dirt:"#8a6a4a", top:"#6fbf5f", stone:"#8d9199", trees:["#3f8d4a", "#4fa05b", "#5fb36a"], tt:"pine", snowy:0};
+var tt = {t:0, key:"", bg:null, V:null, ts:6, hx:0, birds:[], parts:[]};
+function titleSurf(i){ return Math.round(3 + Math.sin(i*.19)*1.6 + Math.sin(i*.07+1)*2.4 + (i < 6 ? (6-i)*.0 : 0)); }
+function titleLayout(){
+  var w = W, h = H, V = {w:w, h:h, TS:Math.max(4, Math.round(w/110)), parts:tt.parts}, ts = V.TS;
+  V.y0 = Math.round(h*.84); tt.ts = ts; tt.V = V; tt.key = w+"x"+h;
+  if(!tt.parts.length){ var r = rng(7); for(var i = 0; i < 40; i++) tt.parts.push({x:r(), y:r(), s:14+r()*26, a:r()*6}); }
+  var cv = cvMake(w, h), c = cv.getContext("2d"), P = PAL.dawn, i;
+  P.forEach(function(col, j){ R(c, 0, Math.floor(j*h/5), w, Math.ceil(h/5)+1, col); });
+  for(i = 1; i < 5; i++){ var by = Math.floor(i*h/5); for(var x = 0; x < w; x += 4){ R(c, x + (Math.floor(x/4)%2)*2, by, 2, 2, P[i]); R(c, x + (Math.floor(x/4)%2 ? 0 : 2), by-2, 2, 2, P[i-1]); } }
+  // sun
+  var sx = Math.round(w*.74), sy = Math.round(h*.36), sr = Math.max(14, Math.round(h*.07));
+  R(c, sx-sr-4, sy-sr-4, sr*2+8, sr*2+8, "rgba(255,235,170,.3)"); R(c, sx-sr, sy-sr, sr*2, sr*2, "#fff3a8"); R(c, sx-sr+4, sy-sr+4, sr*2-8, sr*2-8, "#ffe14d");
+  farLayer(c, V, "peaks", "#9aa6dc", h*.5, 5, V.y0-8);
+  farLayer(c, V, "jag", "#7d8ccc", h*.36, 11, V.y0-8);
+  farLayer(c, V, "hills", "#5f8f78", h*.22, 4, V.y0-8);
+  // foreground hill with a path, blocks of grass and dirt
+  var cols = Math.ceil(w/ts)+1, k;
+  tt.surf = [];
+  for(i = 0; i < cols; i++){
+    var hg = titleSurf(i), sy2 = V.y0-hg*ts; tt.surf.push(sy2);
+    for(k = 0; sy2+k*ts < h+ts; k++) c.drawImage(topTex(TL, k === 0 ? "grass" : k < 3 ? "dirt" : "stone0", ts), i*ts, sy2+k*ts);
+  }
+  var rt = rng(3); for(i = 4; i < cols-2; i++){ if(rt() < .16 && i%3 !== 0){ drawTree(c, V, TL, {col:TL.trees[Math.floor(rt()*3)]}, i*ts, tt.surf[i]); } }
+  tt.bg = cv;
+}
+function drawTitle(dt){
+  tt.t += dt; var c = tcx, w = W, h = H, t = tt.t, V;
+  if(tt.key !== w+"x"+h || !tt.bg) titleLayout();
+  V = tt.V; c.imageSmoothingEnabled = false; c.drawImage(tt.bg, 0, 0);
+  drawClouds(c, V, t);
+  // birds
+  for(var i = 0; i < 3; i++){ var bx = ((t*(9+i*3)+i*w/3) % (w+40)) - 20, by = h*.18+i*h*.05+Math.sin(t*1.3+i)*3, f = Math.floor(t*6+i)%2; R(c, bx-3, by+f, 3, 1, "#2a2a2a"); R(c, bx, by+1-f, 3, 1, "#2a2a2a"); R(c, bx, by+1, 1, 1, "#2a2a2a"); }
+  // a tiny hiker walking along the hill, again and again
+  var ts = tt.ts, span = w+60, px = (t*14) % span - 30, col = Math.max(0, Math.min(tt.surf.length-1, Math.floor(px/ts))), py = tt.surf[col];
+  person(c, px, py, 1, {walk:true, fr:Math.floor(t*4)%2}, save.h);
+  ambDraw(c, V, "leaves", t, TL);
+  // the logo
+  var k = Math.max(3, Math.min(8, Math.floor(w/120))), lw = txtW("TINY HIKER", k), lx = Math.round((w-lw)/2), ly = Math.round(h*.09 + Math.sin(t*1.6)*1.5);
+  R(c, lx-k*3, ly-k*2, lw+k*6, 7*k+k*4, "rgba(30,20,10,.32)");
+  txt(c, "TINY HIKER", lx, ly, k, function(r){ return r < 2 ? "#fff3a8" : r < 4 ? "#ffd23f" : r < 6 ? "#ffb347" : "#e8892a"; }, "#2a1b0e");
+  var sub = "KOREA MOUNTAIN ADVENTURE", sk = Math.max(1, Math.floor(k/3)), sw = txtW(sub, sk);
+  txt(c, sub, Math.round((w-sw)/2), ly+7*k+k*2+4, sk, "#fff", "#2a1b0e");
+}
+
+/* ==== pages.js ==== */
+
+// ---------- pages: Home / Explore / My Map, plus the little overlays ----------
+var page = "home", PS = 2, W = 640, H = 360, filt = "all", prevSel = null, thumbs = {}, thumbQ = [], thumbBusy = false;
+var NAV = [["home", "Home"], ["explore", "Explore"], ["mymap", "My Map"]];
+(function(){ var n = $("nav"); NAV.forEach(function(a){ var b = document.createElement("button"); b.id = "nv_" + a[0]; b.textContent = a[1]; b.onclick = function(){ if(page !== "hike") go(a[0]); }; n.appendChild(b); }); })();
+function closeOv(){ $("ov").classList.remove("show"); }
+function openOv(html){ $("ovBox").innerHTML = html; $("ov").classList.add("show"); }
+function go(p){
+  page = p; document.body.dataset.page = p; closeOv();
+  NAV.forEach(function(a){ $("nv_" + a[0]).classList.toggle("on", a[0] === p); });
+  if(p !== "hike"){ $("toast").style.display = "none"; $("prompt").style.display = "none"; $("bubble").style.display = "none"; }
+  if(p === "explore"){ renderFilters(); renderCards(); expMap.resize(W, H); highlightCard(expMap.sel, false); }
+  if(p === "mymap"){ renderMyMap(); }
+  $("tip").style.display = "none";
+}
+function gameTime(m){ var s = (m.NN-4)/(BASE*1)*1.3; return s < 80 ? "about " + (Math.round(s/5)*5) + " sec" : "about " + (Math.round(s/30)/2) + " min"; }
+function stars(n){ return "&#9733;".repeat(n) + "&#9734;".repeat(3-n); }
+// ----- Explore: the map and its cards -----
+var expMap = MapView($("map"), "explore", {
+  cover:function(){ var mob = innerWidth <= 760; return [0, mob ? 96 : 100, mob ? innerWidth : innerWidth-390, mob ? innerHeight-232 : innerHeight]; },
+  state:function(m){ return {dim:filt !== "all" && m.lv !== filt, done:!!save.done[m.id]}; },
+  onSelect:function(m, focus){ if(m && !focus && prevSel === m){ startHike(m); return; } prevSel = m; highlightCard(m, true); tone(660, .08, .04); },
+  onHover:function(m, e){ var t = $("tip"); if(!m || !e){ t.style.display = "none"; return; } t.innerHTML = esc(m.n) + " " + esc(m.en) + " &middot; " + esc(m.hs) + " &middot; " + LVL[m.lv]; t.style.display = "block"; t.style.left = (e.clientX+14) + "px"; t.style.top = (e.clientY+14) + "px"; }
+});
+$("zin").onclick = function(){ expMap.zoomBy(1.3); }; $("zout").onclick = function(){ expMap.zoomBy(1/1.3); }; $("zrst").onclick = function(){ expMap.fit(); };
+function renderFilters(){
+  var f = $("filters"), h = "", opts = [["all", "All", mountains.length], [0, "Easy", 0], [1, "Moderate", 0], [2, "Challenging", 0]];
+  mountains.forEach(function(m){ opts[m.lv+1][2]++; });
+  opts.forEach(function(o){ h += "<button class='chip " + (o[0] === "all" ? "" : LVC[o[0]]) + (filt === o[0] ? " on" : "") + "' data-f='" + o[0] + "'>" + o[1] + " (" + o[2] + ")</button>"; });
+  h += "<div class='note'>Tap a mountain, then START TRAIL. Difficulty is a rough rating from height, not an official trail grade.</div>";
+  f.innerHTML = h;
+  Array.prototype.forEach.call(f.querySelectorAll(".chip"), function(b){ b.onclick = function(){ var v = b.getAttribute("data-f"); filt = v === "all" ? "all" : +v; if(expMap.sel && filt !== "all" && expMap.sel.lv !== filt){ expMap.sel = null; prevSel = null; } renderFilters(); renderCards(); }; });
+}
+function renderCards(){
+  var box = $("cards"), list = mountains.filter(function(m){ return filt === "all" || m.lv === filt; }); box.innerHTML = ""; thumbQ = [];
+  list.forEach(function(m){
+    var d = save.done[m.id], el = document.createElement("article"); el.className = "card"; el.id = "card_" + m.id;
+    var lms = m.lm.map(function(a, i){ var ok = save.lm[m.id + ":" + i]; return "<li class='lmk" + (ok ? " ok" : "") + "'>" + (ok ? "&#10003; " : "&#9675; ") + "<b>" + esc(a[0]) + "</b> &mdash; " + esc(a[1]) + "</li>"; }).join("");
+    var fa = m.facts.map(function(a){ return "<li>" + esc(a) + "</li>"; }).join("");
+    el.innerHTML = "<canvas class='th' width='240' height='150'></canvas>" +
+      "<div class='hd'><div><b>" + esc(m.n) + "</b><i>" + esc(m.en) + "</i></div><em>" + m.em + "</em></div>" +
+      "<p>" + esc(m.blurb) + "</p>" +
+      "<div class='meta'>&#128205; " + esc(m.r) + " &middot; <b>" + esc(m.hs) + "</b><br><span class='pill " + LVC[m.lv] + "'>" + LVL[m.lv] + "</span> <span class='stars'>" + stars(m.lv+1) + "</span><br>" +
+      "&#9201; Real-life time: " + (m.real ? esc(m.real.t) + " <small>(source: " + esc(m.real.s) + ")</small>" : "varies by route") + "<br>&#127918; Game hike: " + gameTime(m) + (d ? " &middot; <b>&#9733; summit reached</b>" : "") + "</div>" +
+      "<details><summary>Facts &amp; landmarks (" + m.lm.filter(function(a, i){ return save.lm[m.id + ":" + i]; }).length + "/" + m.lm.length + " found)</summary><ul>" + fa + lms + "<li><small>Game trails: " + esc(m.trail.e) + " (easy) / " + esc(m.trail.s) + " (steep). Trail names and routes in the game are illustrations, not real navigation.</small></li></ul></details>" +
+      "<button class='btn go wide'>" + (d ? "PLAY AGAIN &#8635;" : "START TRAIL &#9656;") + "</button>";
+    el.onclick = function(e){ if(e.target.tagName === "SUMMARY" || e.target.tagName === "BUTTON") return; expMap.select(m, true); };
+    el.querySelector("button").onclick = function(){ startHike(m); };
+    box.appendChild(el); queueThumb(m, el.querySelector(".th"));
+  });
+  if(!list.length) box.innerHTML = "<div class='card'>No mountains in this group.</div>";
+}
+function queueThumb(m, cv){ if(thumbs[m.id]){ cv.getContext("2d").drawImage(thumbs[m.id], 0, 0); return; } thumbQ.push([m, cv]); if(!thumbBusy){ thumbBusy = true; setTimeout(runThumb, 20); } }
+function runThumb(){
+  var j = thumbQ.shift(); if(!j){ thumbBusy = false; return; }
+  try{ var m = j[0], keep = M_route(m); thumbs[m.id] = thumbs[m.id] || renderScene(m, 240, 150, false); } catch(e){ showErr(e.message); }
+  if(j[1].isConnected && thumbs[j[0].id]){ j[1].getContext("2d").drawImage(thumbs[j[0].id], 0, 0); }
+  setTimeout(runThumb, 24);
+}
+function M_route(m){ return m.route; }
+function highlightCard(m, scroll){
+  Array.prototype.forEach.call(document.querySelectorAll(".card.sel"), function(e){ e.classList.remove("sel"); });
+  if(!m) return; var el = $("card_" + m.id); if(!el) return; el.classList.add("sel");
+  if(scroll){ var box = $("cards"); if(innerWidth <= 760) box.scrollTo({left:el.offsetLeft - (box.clientWidth-el.offsetWidth)/2, behavior:"smooth"}); else box.scrollTo({top:el.offsetTop - 8, behavior:"smooth"}); }
+}
+// ----- My Map -----
+var jMap = MapView($("jmap"), "journal", {
+  cover:function(){ var b = $("jmap").getBoundingClientRect(); return [0, 0, b.width, b.height]; },
+  state:function(m){ return {pin:!!save.pins[m.id], real:save.logs.some(function(l){ return l.m === m.id; }), dim:false}; },
+  onHover:function(m, e){ var t = $("tip"); if(!m || !e){ t.style.display = "none"; return; } t.innerHTML = esc(m.n) + " " + esc(m.en) + " &middot; " + esc(m.hs); t.style.display = "block"; t.style.left = (e.clientX+14) + "px"; t.style.top = (e.clientY+14) + "px"; }
+});
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function realOf(id){ return save.logs.filter(function(l){ return l.m === id; }); }
+function renderMyMap(){
+  var realIds = {}; save.logs.forEach(function(l){ realIds[l.m] = 1; }); var nDone = cnt(save.done);
+  $("stats").innerHTML = "<div><b>" + save.logs.length + "</b><span>REAL HIKE LOGS</span></div><div><b>" + cnt(realIds) + "</b><span>MOUNTAINS HIKED IN REAL LIFE</span></div><div><b>" + nDone + "</b><span>GAME BADGES</span></div>";
+  $("rank").innerHTML = "Rank: <b>" + rankOf(nDone) + "</b><br><small>" + nDone + " of " + mountains.length + " summits in the game</small>";
+  var h = "";
+  mountains.forEach(function(m){
+    var d = save.done[m.id], lg = realOf(m.id), pinned = !!save.pins[m.id], found = m.lm.filter(function(a, i){ return save.lm[m.id + ":" + i]; }).length;
+    h += "<div class='cc" + (lg.length ? " real" : "") + (d ? "" : " off") + "' data-m='" + m.id + "'><canvas width='48' height='48'></canvas><div><b>" + esc(m.n) + "</b> " + esc(m.en) + "<br>" +
+      (d ? "&#9733; Game badge earned" + (pinned ? " &middot; pinned" : " &middot; <a href='#' data-pin='" + m.id + "' style='color:#c8621a'>pin it</a>") : "&#9734; Game badge not earned") + "<br>" +
+      (lg.length ? "&#128205; Hiked in real life" + (lg.length > 1 ? " &times;" + lg.length : "") : "&#9675; Not logged as a real hike") + "<br><small>" + found + "/" + m.lm.length + " places found in game</small></div></div>";
+  });
+  $("coll").innerHTML = h;
+  Array.prototype.forEach.call($("coll").querySelectorAll(".cc"), function(el){ var m = mByName(el.getAttribute("data-m")); el.querySelector("canvas").getContext("2d").drawImage(badgeCv(m, !!save.done[m.id], 48), 0, 0); });
+  Array.prototype.forEach.call($("coll").querySelectorAll("[data-pin]"), function(a){ a.onclick = function(e){ e.preventDefault(); pinMountain(a.getAttribute("data-pin")); }; });
+  var mh = "<h2>Your hiking memories</h2>";
+  if(!save.logs.length) mh += "<p style='margin:0;font-size:14px'>Nothing here yet. When you hike a mountain for real, pin it above.</p>";
+  save.logs.forEach(function(l){ var m = mByName(l.m); if(!m) return; mh += "<div class='mem'><b>&#128205; " + esc(m.n) + " " + esc(m.en) + "</b><div style='font-size:13px'>" + (l.date ? esc(l.date) : "Date not added") + "</div>" + (l.note ? "<p>" + esc(l.note) + "</p>" : "") + "<button class='btn sm alt' data-rm='" + esc(l.id) + "'>Remove</button></div>"; });
+  $("mem").innerHTML = mh;
+  Array.prototype.forEach.call($("mem").querySelectorAll("[data-rm]"), function(b){ b.onclick = function(){ save.logs = save.logs.filter(function(l){ return l.id !== b.getAttribute("data-rm"); }); store(); renderMyMap(); }; });
+  var sl = $("rm"); if(!sl.options.length) mountains.forEach(function(m){ var o = document.createElement("option"); o.value = m.id; o.textContent = m.n + " (" + m.en + ")"; sl.appendChild(o); });
+  buildOpts(); drawPrev();
+  var b = $("jmap").getBoundingClientRect(); jMap.resize(b.width/PS, b.height/PS);
+}
+function pinMountain(id){ if(!save.done[id]) return; save.pins[id] = save.pins[id] || today(); store(); if(page !== "mymap") go("mymap"); else renderMyMap(); setTimeout(function(){ jMap.drop(id); }, 350); }
+$("rform").onsubmit = function(e){
+  e.preventDefault(); var id = $("rm").value, d = $("rd").value, n = $("rn").value.trim().slice(0, 400);
+  save.logs.unshift({id:uid(), m:id, date:d, note:n}); store(); $("rd").value = ""; $("rn").value = ""; renderMyMap(); setTimeout(function(){ jMap.drop(id); }, 300); showToast("Pinned in your real-life log. Nice hike!", 2600);
+};
+var resetArmed = false;
+$("reset").onclick = function(){
+  var b = $("reset"); if(!resetArmed){ resetArmed = true; b.textContent = "Tap again to erase everything"; setTimeout(function(){ resetArmed = false; b.textContent = "Reset my progress"; }, 4000); return; }
+  var keepH = save.h, keepSet = save.set; save = freshSave(); save.h = keepH; save.set = keepSet; store(); resetArmed = false; b.textContent = "Reset my progress"; thumbs = {}; renderMyMap(); showToast("Progress erased. Your hiker was kept.", 2600);
+};
+// ----- my hiker: preview + editor -----
+function drawPrev(){ var c = $("prev").getContext("2d"); c.imageSmoothingEnabled = false; R(c, 0, 0, 48, 64, "#8fd0ff"); R(c, 0, 36, 48, 28, "#cfe9ff"); R(c, 0, 57, 48, 7, "#6fbf5f"); R(c, 0, 57, 48, 2, "#7fcf55"); person(c, 24, 57, 1, {fr:1}, save.h); }
+function refreshH(){ store(); drawPrev(); }
+function buildOpts(){
+  var o = $("opts"); o.innerHTML = "";
+  function row(label, el){ var s = document.createElement("span"); s.textContent = label; o.appendChild(s); o.appendChild(el); }
+  OPT.forEach(function(a){
+    var k = a[0], L = a[2], w = document.createElement("span"), t = document.createElement("span"); w.className = "sw";
+    function mk(txt2, step){ var b = document.createElement("button"); b.type = "button"; b.textContent = txt2; b.onclick = function(){ var i = L.indexOf(save.h[k]); i = (i+step+L.length)%L.length; save.h[k] = L[i]; t.textContent = save.h[k]; refreshH(); }; return b; }
+    t.textContent = save.h[k]; w.appendChild(mk("<", -1)); w.appendChild(t); w.appendChild(mk(">", 1)); row(a[1], w);
+  });
+  COL.forEach(function(a){ var i = document.createElement("input"); i.type = "color"; i.value = save.h[a[0]]; i.oninput = function(){ save.h[a[0]] = i.value; refreshH(); }; row(a[1], i); });
+}
+function pick1(L){ return L[Math.floor(Math.random()*L.length)]; }
+$("rand").onclick = function(){
+  OPT.forEach(function(a){ save.h[a[0]] = pick1(a[2]); });
+  save.h.skin = pick1(["#f8d2b0", "#efbd96", "#d29a6a", "#a86f45", "#ffe0c4"]); save.h.hairC = pick1(["#4a2f23", "#1c1c1c", "#a0522d", "#e0b44a", "#d14a2c", "#8a8a8a"]);
+  ["hatC", "jk", "pants", "pack"].forEach(function(k){ save.h[k] = pick1(["#e86a5a", "#3a6fd8", "#4a9a63", "#e8c14a", "#8a5cc0", "#ff8fb3", "#ff8a3d", "#3f5e8a", "#2f3b2c"]); });
+  buildOpts(); refreshH();
+};
+$("startBtn").onclick = function(){ go("explore"); };
+// ----- overlays during the hike -----
+function showFork(){
+  var M = G.m, e = M.lmk.filter(function(l){ return l.where === "e"; })[0], s = M.lmk.filter(function(l){ return l.where === "s"; })[0];
+  openOv("<div class='big'>THE TRAIL SPLITS</div><p style='margin:0'>Pick a route. Both reach the summit.<br><small>Game routes, not real trail navigation.</small></p><div class='opt2'>" +
+    "<button class='btn go' onclick='chooseRoute(\"easy\")'>[2] EASY<small><b>" + esc(M.trail.e) + "</b><br>Longer and gentler, with a bench." + (e ? "<br>Passes: " + esc(e.name) : "") + "</small></button>" +
+    "<button class='btn' onclick='chooseRoute(\"steep\")'>[1] STEEP<small><b>" + esc(M.trail.s) + "</b><br>Shorter but harder on stamina." + (s ? "<br>Passes: " + esc(s.name) : "") + "</small></button></div>");
+}
+function openPause(){
+  G.mode = "paused"; G.keys.l = G.keys.r = false;
+  openOv("<div class='big'>PAUSED</div><div class='row'><span>Walking speed</span><b id='spdv'>" + SPEED + "x</b></div><input type='range' id='spdr' min='.5' max='3' step='.25' value='" + SPEED + "' style='width:100%'><p style='font-size:13px;margin:8px 0'>&larr; &rarr; walk &middot; Space jump &middot; E use &middot; Q drink &middot; F snack &middot; +/&minus; speed</p>" +
+    "<button class='btn go wide' onclick='resumeHike()'>Resume</button><button class='btn alt wide' style='margin-top:8px' onclick='leaveHike()'>Leave hike (back to Explore)</button>");
+  $("spdr").oninput = function(){ setSpeed(+this.value); };
+}
+function resumeHike(){ closeOv(); G.mode = "play"; last = performance.now(); }
+function fmtT(s){ return s < 60 ? s + " s" : Math.floor(s/60) + " min " + (s%60) + " s"; }
+function showSummit(){
+  var M = G.m, r = G.res, top = M.lmk.filter(function(l){ return l.where === "top"; })[0], pinned = !!save.pins[M.id];
+  openOv("<div class='big'>SUMMIT!</div><div id='bdg'></div><h2 style='margin:4px 0'>" + esc(M.n) + " " + esc(M.en) + "</h2><div style='font-size:14px'>" + esc(M.hs) + " &middot; " + esc(M.r) + "</div>" +
+    (r.first ? "<div style='color:#c8621a;margin:4px 0'><b>NEW BADGE!</b></div>" : "") +
+    "<div class='row'><span>Game time</span><b>" + fmtT(r.t) + "</b></div><div class='row'><span>Places found</span><b>" + r.lm[0] + "/" + r.lm[1] + "</b></div><div class='row'><span>Trail stamp</span><b>" + (M.stamp.got ? "collected" : save.stamps[M.id] ? "in your passport" : "not found this time") + "</b></div><div class='row'><span>Route</span><b>" + (r.route === "steep" ? esc(M.trail.s) : esc(M.trail.e)) + "</b></div>" +
+    (top ? "<p style='font-size:14px;margin:8px 0'><b>" + esc(top.name) + ":</b> " + esc(top.fact) + "</p>" : "") +
+    "<p style='font-size:12px;margin:6px 0'>This is a game achievement. It does not count as a real hike. You add real hikes yourself on My Map.</p>" +
+    "<button class='btn go wide' id='pinB'>" + (pinned ? "View My Map" : "&#128204; Pin to My Map") + "</button><button class='btn alt wide' style='margin-top:8px' id='bkB'>Back to Explore</button>");
+  $("bdg").appendChild(badgeCv(M, true, 48)); $("bdg").firstChild.style.cssText = "width:96px;height:96px;margin:6px auto;display:block";
+  $("pinB").onclick = function(){ G.mode = "idle"; ambStop(); if(pinned){ go("mymap"); } else pinMountain(M.id); };
+  $("bkB").onclick = function(){ G.mode = "idle"; ambStop(); thumbs = {}; go("explore"); };
+}
+
+/* ==== init.js ==== */
+
+// ---------- start up ----------
+function fit(){
+  PS = innerWidth < 600 ? 2 : Math.max(2, Math.ceil(innerHeight/400)); W = Math.ceil(innerWidth/PS); H = Math.ceil(innerHeight/PS);
+  $("tcv").width = $("hike").width = W; $("tcv").height = $("hike").height = H; tt.key = "";
+  expMap.resize(W, H);
+  if(page === "hike" && G.m && G.m.sf){ layoutHike(G.m); G.hy = surfY(G.V, G.m, Math.floor(G.xc)); }
+  if(page === "mymap"){ var b = $("jmap").getBoundingClientRect(); jMap.resize(b.width/PS, b.height/PS); }
+}
+window.addEventListener("resize", fit);
+function loop(now){
+  var dt = Math.max(0, Math.min(.1, (now-last)/1000)); last = now;
+  try{
+    if(page === "hike" && G.m){ if(G.mode !== "paused" && G.mode !== "fork") update(dt); else hudUpdate(); draw(); }
+    else if(page === "home") drawTitle(dt);
+    else if(page === "explore") expMap.draw(dt);
+    else if(page === "mymap") jMap.draw(dt);
+  }catch(e){ showErr(e.message + "\n" + (e.stack || "").split("\n")[1]); }
+  requestAnimationFrame(loop);
+}
+document.addEventListener("visibilitychange", function(){ if(document.hidden && page === "hike" && G.mode === "play") openPause(); });
+$("mute").onclick = function(){ setSound(!soundOn); };
+$("mute").innerHTML = muteIcon(soundOn); $("mute").title = soundOn ? "Sound on (tap to mute)" : "Sound off (tap to unmute)";
+go("home"); fit(); requestAnimationFrame(loop);
+
+</script></body></html>
